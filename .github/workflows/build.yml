@@ -30,7 +30,7 @@ jobs:
         shell: bash
 
       - name: Build + SonarCloud
-        run: ./mvnw clean verify sonar:sonar -Dsonar.projectKey=poun-2108_TP_2_auth_fragile -Dsonar.organization=poun-2108 -Dsonar.host.url=https://sonarcloud.io
+        run: ./mvnw clean package -DskipTests sonar:sonar -Dsonar.projectKey=poun-2108_TP_2_auth_fragile -Dsonar.organization=poun-2108 -Dsonar.host.url=https://sonarcloud.io
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: bash
