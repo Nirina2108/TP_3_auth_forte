@@ -35,8 +35,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.projectKey=TON_PROJECT_KEY
-            -Dsonar.organization=TON_ORGANIZATION
+            -Dsonar.projectKey=poun-2108_TP_2_auth_fragile
+            -Dsonar.organization=poun-2108
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.sources=src
             -Dsonar.java.binaries=bin
