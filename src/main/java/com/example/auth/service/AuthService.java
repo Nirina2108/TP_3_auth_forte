@@ -11,19 +11,49 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Service qui gere la logique d'authentification.
+ * Il permet l'inscription, la connexion et la recuperation
+ * de l'utilisateur a partir de son token.
+ */
 @Service
 public class AuthService {
 
+    /**
+     * Repository pour acceder aux utilisateurs en base de donnees.
+     */
     private final UserRepository userRepository;
+
+    /**
+     * Validateur de politique de mot de passe.
+     */
     private final PasswordPolicyValidator passwordPolicyValidator;
+
+    /**
+     * Outil de chiffrement des mots de passe.
+     */
     private final BCryptPasswordEncoder passwordEncoder;
 
+    /**
+     * Construit le service d'authentification.
+     *
+     * @param userRepository repository des utilisateurs
+     */
     public AuthService(UserRepository userRepository) {
         this.userRepository = userRepository;
         this.passwordPolicyValidator = new PasswordPolicyValidator();
         this.passwordEncoder = new BCryptPasswordEncoder();
     }
 
+    /**
+     * Inscrit un nouvel utilisateur apres verification des champs
+     * et validation du mot de passe.
+     *
+     * @param request donnees d'inscription
+     * @return utilisateur enregistre
+     * @throws RuntimeException si un champ obligatoire est vide
+     *                          ou si le mot de passe est invalide
+     */
     public User register(RegisterRequest request) {
 
         if (request.getName() == null || request.getName().isBlank()) {
@@ -59,6 +89,18 @@ public class AuthService {
         return userRepository.save(user);
     }
 
+    /**
+     * Connecte un utilisateur.
+     * Verifie les champs, controle le blocage temporaire,
+     * compare le mot de passe et genere un token si la connexion reussit.
+     *
+     * @param request donnees de connexion
+     * @return token de session genere
+     * @throws RuntimeException si l'email ou le mot de passe est vide,
+     *                          si l'utilisateur est introuvable,
+     *                          si le compte est bloque
+     *                          ou si les identifiants sont invalides
+     */
     public String login(LoginRequest request) {
 
         if (request.getEmail() == null || request.getEmail().isBlank()) {
@@ -100,6 +142,13 @@ public class AuthService {
         return token;
     }
 
+    /**
+     * Retourne l'utilisateur correspondant au token fourni.
+     *
+     * @param token token d'authentification
+     * @return utilisateur associe au token
+     * @throws RuntimeException si le token est vide ou invalide
+     */
     public User getMe(String token) {
 
         if (token == null || token.isBlank()) {

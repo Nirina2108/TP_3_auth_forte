@@ -14,31 +14,68 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * Controleur JavaFX de l'interface d'authentification.
+ * Cette classe gere :
+ * l'inscription,
+ * la connexion,
+ * la verification visuelle du mot de passe,
+ * et les appels HTTP vers l'API Spring Boot.
+ */
 public class AuthUiController {
 
+    /**
+     * Champ pour saisir le nom.
+     */
     @FXML
     private TextField nameField;
 
+    /**
+     * Champ pour saisir l'email.
+     */
     @FXML
     private TextField emailField;
 
+    /**
+     * Champ pour saisir le mot de passe.
+     */
     @FXML
     private PasswordField passwordField;
 
+    /**
+     * Champ pour confirmer le mot de passe.
+     */
     @FXML
     private PasswordField passwordConfirmField;
 
+    /**
+     * Label pour afficher la force du mot de passe.
+     */
     @FXML
     private Label passwordStrengthLabel;
 
+    /**
+     * Label pour afficher si les mots de passe correspondent.
+     */
     @FXML
     private Label passwordMatchLabel;
 
+    /**
+     * Label pour afficher les messages a l'utilisateur.
+     */
     @FXML
     private Label messageLabel;
 
+    /**
+     * URL de base de l'API d'authentification.
+     */
     private final String apiUrl = "http://localhost:8082/api/auth";
 
+    /**
+     * Methode appelee automatiquement au chargement de l'interface.
+     * Elle ajoute des ecouteurs pour mettre a jour
+     * la force du mot de passe et la confirmation.
+     */
     @FXML
     public void initialize() {
         passwordField.textProperty().addListener((observable, oldValue, newValue) -> {
@@ -51,6 +88,12 @@ public class AuthUiController {
         });
     }
 
+    /**
+     * Gere l'inscription de l'utilisateur.
+     * Verifie les champs, compare les mots de passe,
+     * controle la validite du mot de passe
+     * puis envoie la requete a l'API.
+     */
     @FXML
     public void handleRegister() {
         String name = nameField.getText();
@@ -95,6 +138,11 @@ public class AuthUiController {
         }
     }
 
+    /**
+     * Gere la connexion de l'utilisateur.
+     * Verifie les champs obligatoires
+     * puis envoie la requete de connexion a l'API.
+     */
     @FXML
     public void handleLogin() {
         String email = emailField.getText();
@@ -121,6 +169,11 @@ public class AuthUiController {
         }
     }
 
+    /**
+     * Met a jour l'affichage de la force du mot de passe.
+     * La force depend de la validite du mot de passe
+     * et de sa longueur.
+     */
     private void updatePasswordStrength() {
         String password = passwordField.getText();
 
@@ -143,6 +196,10 @@ public class AuthUiController {
         }
     }
 
+    /**
+     * Met a jour l'affichage de correspondance
+     * entre le mot de passe et sa confirmation.
+     */
     private void updatePasswordMatch() {
         String password = passwordField.getText();
         String confirm = passwordConfirmField.getText();
@@ -161,6 +218,17 @@ public class AuthUiController {
         }
     }
 
+    /**
+     * Verifie si un mot de passe respecte la regle minimale :
+     * 12 caracteres minimum,
+     * une majuscule,
+     * une minuscule,
+     * un chiffre,
+     * un caractere special.
+     *
+     * @param password mot de passe a verifier
+     * @return true si le mot de passe est valide, sinon false
+     */
     private boolean isPasswordValid(String password) {
         if (password == null || password.length() < 12) {
             return false;
@@ -188,6 +256,14 @@ public class AuthUiController {
         return hasUppercase && hasLowercase && hasDigit && hasSpecial;
     }
 
+    /**
+     * Envoie une requete HTTP POST a l'API.
+     *
+     * @param urlText adresse de destination
+     * @param jsonBody corps JSON a envoyer
+     * @return corps de la reponse HTTP
+     * @throws IOException si la requete echoue ou si l'API retourne une erreur
+     */
     private String sendPost(String urlText, String jsonBody) throws IOException {
         URL url = new URL(urlText);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -220,6 +296,13 @@ public class AuthUiController {
         }
     }
 
+    /**
+     * Lit un flux de donnees et retourne son contenu sous forme de texte.
+     *
+     * @param stream flux a lire
+     * @return texte lu dans le flux
+     * @throws IOException si une erreur de lecture se produit
+     */
     private String readStream(InputStream stream) throws IOException {
         if (stream == null) {
             return "";
@@ -236,6 +319,13 @@ public class AuthUiController {
         return result.toString();
     }
 
+    /**
+     * Echappe les caracteres sensibles dans une chaine
+     * avant de construire un texte JSON.
+     *
+     * @param text texte a proteger
+     * @return texte echappe
+     */
     private String escapeJson(String text) {
         if (text == null) {
             return "";

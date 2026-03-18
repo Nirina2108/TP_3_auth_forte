@@ -79,17 +79,16 @@
 	<build>
 		<plugins>
 
+			<!-- Plugin JavaDoc -->
 			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-
-			<plugin>
-				<groupId>org.openjfx</groupId>
-				<artifactId>javafx-maven-plugin</artifactId>
-				<version>0.0.8</version>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>3.6.3</version>
 				<configuration>
-					<mainClass>com.example.auth.ui.AuthUiApplication</mainClass>
+					<encoding>UTF-8</encoding>
+					<source>17</source>
+					<show>private</show>
+					<nohelp>true</nohelp>
 				</configuration>
 			</plugin>
 
