@@ -1,8 +1,10 @@
 package com.example.auth.dto;
 
 /**
- * Classe utilisee pour transporter les donnees de connexion.
- * Elle contient l'email et le mot de passe saisis par l'utilisateur.
+ * Objet utilisé pour recevoir les données de connexion.
+ *
+ * @author Poun
+ * @version 1.0
  */
 public class LoginRequest {
 
@@ -17,7 +19,7 @@ public class LoginRequest {
     private String password;
 
     /**
-     * Constructeur vide necessaire pour la deserialisation JSON.
+     * Constructeur vide.
      */
     public LoginRequest() {
     }
@@ -25,16 +27,16 @@ public class LoginRequest {
     /**
      * Retourne l'email.
      *
-     * @return email de l'utilisateur
+     * @return email
      */
     public String getEmail() {
         return email;
     }
 
     /**
-     * Modifie l'email.
+     * Définit l'email.
      *
-     * @param email nouvel email
+     * @param email email utilisateur
      */
     public void setEmail(String email) {
         this.email = email;
@@ -50,9 +52,9 @@ public class LoginRequest {
     }
 
     /**
-     * Modifie le mot de passe.
+     * Définit le mot de passe.
      *
-     * @param password nouveau mot de passe
+     * @param password mot de passe utilisateur
      */
     public void setPassword(String password) {
         this.password = password;

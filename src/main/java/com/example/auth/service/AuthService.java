@@ -4,158 +4,153 @@ import com.example.auth.dto.LoginRequest;
 import com.example.auth.dto.RegisterRequest;
 import com.example.auth.entity.User;
 import com.example.auth.repository.UserRepository;
-import com.example.auth.validator.PasswordPolicyValidator;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
- * Service qui gere la logique d'authentification.
- * Il permet l'inscription, la connexion et la recuperation
- * de l'utilisateur a partir de son token.
+ * Service contenant la logique métier de l'authentification.
+ *
+ * Version fragile :
+ * - mot de passe stocké en clair
+ * - token simple simulé
+ *
+ * @author Poun
+ * @version 1.0
  */
 @Service
 public class AuthService {
 
     /**
-     * Repository pour acceder aux utilisateurs en base de donnees.
+     * Repository utilisateur.
      */
     private final UserRepository userRepository;
 
     /**
-     * Validateur de politique de mot de passe.
+     * Stockage simple des tokens générés.
      */
-    private final PasswordPolicyValidator passwordPolicyValidator;
+    private final Map<String, Long> tokens = new HashMap<>();
 
     /**
-     * Outil de chiffrement des mots de passe.
-     */
-    private final BCryptPasswordEncoder passwordEncoder;
-
-    /**
-     * Construit le service d'authentification.
+     * Constructeur du service.
      *
-     * @param userRepository repository des utilisateurs
+     * @param userRepository repository utilisateur
      */
     public AuthService(UserRepository userRepository) {
         this.userRepository = userRepository;
-        this.passwordPolicyValidator = new PasswordPolicyValidator();
-        this.passwordEncoder = new BCryptPasswordEncoder();
     }
 
     /**
-     * Inscrit un nouvel utilisateur apres verification des champs
-     * et validation du mot de passe.
+     * Inscrit un utilisateur.
      *
-     * @param request donnees d'inscription
-     * @return utilisateur enregistre
-     * @throws RuntimeException si un champ obligatoire est vide
-     *                          ou si le mot de passe est invalide
+     * @param request données d'inscription
+     * @return réponse avec message et utilisateur
      */
-    public User register(RegisterRequest request) {
+    public Map<String, Object> register(RegisterRequest request) {
+        Map<String, Object> response = new HashMap<>();
 
         if (request.getName() == null || request.getName().isBlank()) {
-            throw new RuntimeException("Name obligatoire");
+            response.put("message", "Nom obligatoire");
+            return response;
         }
 
         if (request.getEmail() == null || request.getEmail().isBlank()) {
-            throw new RuntimeException("Email obligatoire");
+            response.put("message", "Email obligatoire");
+            return response;
         }
 
         if (request.getPassword() == null || request.getPassword().isBlank()) {
-            throw new RuntimeException("Password obligatoire");
+            response.put("message", "Mot de passe obligatoire");
+            return response;
         }
 
-        if (!passwordPolicyValidator.isValid(request.getPassword())) {
-            throw new RuntimeException(
-                    "Password invalide : minimum 12 caracteres, 1 majuscule, 1 minuscule, 1 chiffre et 1 caractere special"
-            );
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            response.put("message", "Email deja utilise");
+            return response;
         }
 
         User user = new User();
         user.setName(request.getName());
         user.setEmail(request.getEmail());
+        user.setPassword(request.getPassword());
 
-        String passwordHash = passwordEncoder.encode(request.getPassword());
-        user.setPasswordHash(passwordHash);
+        userRepository.save(user);
 
-        user.setToken(null);
-        user.setCreatedAt(LocalDateTime.now());
-        user.setFailedAttempts(0);
-        user.setLockUntil(null);
+        response.put("message", "Inscription reussie");
+        response.put("user", user);
 
-        return userRepository.save(user);
+        return response;
     }
 
     /**
      * Connecte un utilisateur.
-     * Verifie les champs, controle le blocage temporaire,
-     * compare le mot de passe et genere un token si la connexion reussit.
      *
-     * @param request donnees de connexion
-     * @return token de session genere
-     * @throws RuntimeException si l'email ou le mot de passe est vide,
-     *                          si l'utilisateur est introuvable,
-     *                          si le compte est bloque
-     *                          ou si les identifiants sont invalides
+     * @param request données de connexion
+     * @return réponse avec message et token
      */
-    public String login(LoginRequest request) {
+    public Map<String, Object> login(LoginRequest request) {
+        Map<String, Object> response = new HashMap<>();
 
         if (request.getEmail() == null || request.getEmail().isBlank()) {
-            throw new RuntimeException("Email obligatoire");
+            response.put("message", "Email obligatoire");
+            return response;
         }
 
         if (request.getPassword() == null || request.getPassword().isBlank()) {
-            throw new RuntimeException("Mot de passe obligatoire");
+            response.put("message", "Mot de passe obligatoire");
+            return response;
         }
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
 
-        if (user.getLockUntil() != null && user.getLockUntil().isAfter(LocalDateTime.now())) {
-            throw new RuntimeException("Compte bloque temporairement. Reessayez plus tard");
+        if (user == null) {
+            response.put("message", "Utilisateur introuvable");
+            return response;
         }
 
-        boolean passwordOk = passwordEncoder.matches(request.getPassword(), user.getPasswordHash());
-
-        if (!passwordOk) {
-            int essais = user.getFailedAttempts() + 1;
-            user.setFailedAttempts(essais);
-
-            if (essais >= 5) {
-                user.setLockUntil(LocalDateTime.now().plusMinutes(2));
-            }
-
-            userRepository.save(user);
-            throw new RuntimeException("Identifiants invalides");
+        if (!user.getPassword().equals(request.getPassword())) {
+            response.put("message", "Mot de passe incorrect");
+            return response;
         }
-
-        user.setFailedAttempts(0);
-        user.setLockUntil(null);
 
         String token = UUID.randomUUID().toString();
-        user.setToken(token);
-        userRepository.save(user);
+        tokens.put(token, user.getId());
 
-        return token;
+        response.put("message", "Connexion reussie");
+        response.put("token", token);
+
+        return response;
     }
 
     /**
-     * Retourne l'utilisateur correspondant au token fourni.
+     * Vérifie si un token est valide.
      *
-     * @param token token d'authentification
-     * @return utilisateur associe au token
-     * @throws RuntimeException si le token est vide ou invalide
+     * @param token token à vérifier
+     * @return true si le token existe
      */
-    public User getMe(String token) {
+    public boolean isTokenValid(String token) {
+        return tokens.containsKey(token);
+    }
 
-        if (token == null || token.isBlank()) {
-            throw new RuntimeException("Token manquant");
+    /**
+     * Permet d'accéder à une ressource protégée.
+     *
+     * @param token token utilisateur
+     * @return réponse d'accès
+     */
+    public Map<String, Object> accessProtectedData(String token) {
+        Map<String, Object> response = new HashMap<>();
+
+        if (!isTokenValid(token)) {
+            response.put("message", "Acces refuse");
+            return response;
         }
 
-        return userRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Token invalide"));
+        response.put("message", "Acces autorise");
+        response.put("secret", "Donnees protegees fragiles");
+
+        return response;
     }
 }

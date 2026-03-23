@@ -2,38 +2,38 @@ package com.example.auth.controller;
 
 import com.example.auth.dto.LoginRequest;
 import com.example.auth.dto.RegisterRequest;
-import com.example.auth.entity.User;
 import com.example.auth.service.AuthService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Controleur REST pour gerer l'authentification.
- * Il expose les endpoints pour :
- * - l'inscription
- * - la connexion
- * - la recuperation de l'utilisateur connecte
+ * Contrôleur REST d'authentification.
+ *
+ * Routes disponibles :
+ * - POST /api/auth/register
+ * - POST /api/auth/login
+ * - GET /api/auth/protected
+ *
+ * @author Poun
+ * @version 1.0
  */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     /**
-     * Logger pour afficher les informations dans la console.
-     */
-    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
-
-    /**
-     * Service d'authentification contenant la logique metier.
+     * Service d'authentification.
      */
     private final AuthService authService;
 
     /**
-     * Constructeur du controleur.
+     * Constructeur du contrôleur.
      *
      * @param authService service d'authentification
      */
@@ -42,66 +42,42 @@ public class AuthController {
     }
 
     /**
-     * Endpoint pour inscrire un nouvel utilisateur.
+     * Inscription d'un utilisateur.
      *
-     * @param request donnees d'inscription (nom, email, mot de passe)
-     * @return reponse contenant un message, l'id et l'email de l'utilisateur
+     * @param request données d'inscription
+     * @return réponse JSON
      */
     @PostMapping("/register")
     public Map<String, Object> register(@RequestBody RegisterRequest request) {
-
-        logger.info("Tentative d'inscription pour {}", request.getEmail());
-
-        User user = authService.register(request);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "User created");
-        response.put("id", user.getId());
-        response.put("email", user.getEmail());
-
-        return response;
+        return authService.register(request);
     }
 
     /**
-     * Endpoint pour connecter un utilisateur.
+     * Connexion d'un utilisateur.
      *
-     * @param request donnees de connexion (email et mot de passe)
-     * @return reponse contenant un message, le token et l'email
+     * @param request données de connexion
+     * @return réponse JSON avec token
      */
     @PostMapping("/login")
     public Map<String, Object> login(@RequestBody LoginRequest request) {
-
-        logger.info("Tentative de connexion pour {}", request.getEmail());
-
-        String token = authService.login(request);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Login success");
-        response.put("token", token);
-        response.put("email", request.getEmail());
-
-        return response;
+        return authService.login(request);
     }
 
     /**
-     * Endpoint pour recuperer les informations de l'utilisateur connecte.
+     * Route protégée.
      *
-     * @param authorizationHeader header contenant le token (Bearer token)
-     * @return informations de l'utilisateur (id, email, date de creation)
+     * @param authorizationHeader en-tête Authorization
+     * @return réponse d'accès
      */
-    @GetMapping("/me")
-    public Map<String, Object> me(@RequestHeader("Authorization") String authorizationHeader) {
-
-        logger.info("Acces a /api/auth/me");
+    @GetMapping("/protected")
+    public Map<String, Object> protectedRoute(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        if (authorizationHeader == null || authorizationHeader.isBlank()) {
+            return Map.of("message", "Token manquant");
+        }
 
         String token = authorizationHeader.replace("Bearer ", "");
-        User user = authService.getMe(token);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("id", user.getId());
-        response.put("email", user.getEmail());
-        response.put("createdAt", user.getCreatedAt());
-
-        return response;
+        return authService.accessProtectedData(token);
     }
 }

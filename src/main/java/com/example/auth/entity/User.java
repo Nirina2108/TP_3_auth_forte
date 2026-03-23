@@ -1,12 +1,22 @@
 package com.example.auth.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+
 import java.time.LocalDateTime;
 
 /**
- * Entite representant un utilisateur dans la base de donnees.
- * Elle contient les informations d'identite, d'authentification
- * et de securite (tentatives de connexion, blocage, token).
+ * Entité représentant un utilisateur.
+ *
+ * Version fragile :
+ * le mot de passe est stocké en clair.
+ *
+ * @author Poun
+ * @version 1.0
  */
 @Entity
 @Table(name = "users")
@@ -30,198 +40,79 @@ public class User {
     private String email;
 
     /**
-     * Mot de passe chiffre de l'utilisateur.
+     * Mot de passe de l'utilisateur.
      */
-    @Column(name = "password_hash")
-    private String passwordHash;
+    private String password;
 
     /**
-     * Token de session de l'utilisateur.
-     */
-    private String token;
-
-    /**
-     * Date de creation du compte.
+     * Date de création.
      */
     private LocalDateTime createdAt;
 
     /**
-     * Nombre de tentatives de connexion echouees.
-     */
-    private int failedAttempts;
-
-    /**
-     * Date jusqu'a laquelle le compte est bloque.
-     */
-    private LocalDateTime lockUntil;
-
-    /**
-     * Constructeur vide necessaire pour JPA.
+     * Constructeur vide obligatoire pour JPA.
      */
     public User() {
     }
 
     /**
-     * Retourne l'identifiant.
+     * Constructeur avec paramètres.
      *
-     * @return id utilisateur
+     * @param name nom
+     * @param email email
+     * @param password mot de passe
      */
+    public User(String name, String email, String password) {
+        this.name = name;
+        this.email = email;
+        this.password = password;
+    }
+
+    /**
+     * Initialise la date de création avant insertion.
+     */
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = LocalDateTime.now();
+    }
+
     public Long getId() {
         return id;
     }
 
-    /**
-     * Modifie l'identifiant.
-     *
-     * @param id nouvel id
-     */
     public void setId(Long id) {
         this.id = id;
     }
 
-    /**
-     * Retourne le nom.
-     *
-     * @return nom de l'utilisateur
-     */
     public String getName() {
         return name;
     }
 
-    /**
-     * Modifie le nom.
-     *
-     * @param name nouveau nom
-     */
     public void setName(String name) {
         this.name = name;
     }
 
-    /**
-     * Retourne l'email.
-     *
-     * @return email utilisateur
-     */
     public String getEmail() {
         return email;
     }
 
-    /**
-     * Modifie l'email.
-     *
-     * @param email nouvel email
-     */
     public void setEmail(String email) {
         this.email = email;
     }
 
-    /**
-     * Retourne le mot de passe chiffre.
-     *
-     * @return mot de passe chiffre
-     */
-    public String getPasswordHash() {
-        return passwordHash;
-    }
-
-    /**
-     * Modifie le mot de passe chiffre.
-     *
-     * @param passwordHash mot de passe chiffre
-     */
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
-    }
-
-    /**
-     * Methode temporaire pour compatibilite.
-     * Retourne le mot de passe chiffre.
-     *
-     * @return mot de passe chiffre
-     */
     public String getPassword() {
-        return passwordHash;
+        return password;
     }
 
-    /**
-     * Methode temporaire pour compatibilite.
-     * Enregistre le mot de passe dans passwordHash.
-     *
-     * @param password mot de passe
-     */
     public void setPassword(String password) {
-        this.passwordHash = password;
+        this.password = password;
     }
 
-    /**
-     * Retourne le token.
-     *
-     * @return token utilisateur
-     */
-    public String getToken() {
-        return token;
-    }
-
-    /**
-     * Modifie le token.
-     *
-     * @param token nouveau token
-     */
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    /**
-     * Retourne la date de creation.
-     *
-     * @return date de creation
-     */
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
-    /**
-     * Modifie la date de creation.
-     *
-     * @param createdAt nouvelle date
-     */
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
-    }
-
-    /**
-     * Retourne le nombre de tentatives echouees.
-     *
-     * @return nombre de tentatives
-     */
-    public int getFailedAttempts() {
-        return failedAttempts;
-    }
-
-    /**
-     * Modifie le nombre de tentatives echouees.
-     *
-     * @param failedAttempts nouveau nombre
-     */
-    public void setFailedAttempts(int failedAttempts) {
-        this.failedAttempts = failedAttempts;
-    }
-
-    /**
-     * Retourne la date de blocage.
-     *
-     * @return date de blocage
-     */
-    public LocalDateTime getLockUntil() {
-        return lockUntil;
-    }
-
-    /**
-     * Modifie la date de blocage.
-     *
-     * @param lockUntil nouvelle date
-     */
-    public void setLockUntil(LocalDateTime lockUntil) {
-        this.lockUntil = lockUntil;
     }
 }

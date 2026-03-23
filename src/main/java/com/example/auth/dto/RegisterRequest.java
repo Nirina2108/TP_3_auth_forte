@@ -1,8 +1,10 @@
 package com.example.auth.dto;
 
 /**
- * Classe utilisee pour transporter les donnees d'inscription.
- * Elle contient les informations necessaires pour creer un utilisateur.
+ * Objet utilisé pour recevoir les données d'inscription.
+ *
+ * @author Poun
+ * @version 1.0
  */
 public class RegisterRequest {
 
@@ -17,12 +19,12 @@ public class RegisterRequest {
     private String email;
 
     /**
-     * Mot de passe choisi par l'utilisateur.
+     * Mot de passe de l'utilisateur.
      */
     private String password;
 
     /**
-     * Constructeur vide necessaire pour la deserialisation JSON.
+     * Constructeur vide.
      */
     public RegisterRequest() {
     }
@@ -30,16 +32,16 @@ public class RegisterRequest {
     /**
      * Retourne le nom.
      *
-     * @return nom de l'utilisateur
+     * @return nom
      */
     public String getName() {
         return name;
     }
 
     /**
-     * Modifie le nom.
+     * Définit le nom.
      *
-     * @param name nouveau nom
+     * @param name nom utilisateur
      */
     public void setName(String name) {
         this.name = name;
@@ -48,16 +50,16 @@ public class RegisterRequest {
     /**
      * Retourne l'email.
      *
-     * @return email de l'utilisateur
+     * @return email
      */
     public String getEmail() {
         return email;
     }
 
     /**
-     * Modifie l'email.
+     * Définit l'email.
      *
-     * @param email nouvel email
+     * @param email email utilisateur
      */
     public void setEmail(String email) {
         this.email = email;
@@ -73,9 +75,9 @@ public class RegisterRequest {
     }
 
     /**
-     * Modifie le mot de passe.
+     * Définit le mot de passe.
      *
-     * @param password nouveau mot de passe
+     * @param password mot de passe utilisateur
      */
     public void setPassword(String password) {
         this.password = password;
