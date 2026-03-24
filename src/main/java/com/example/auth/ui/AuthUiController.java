@@ -1,5 +1,6 @@
 package com.example.auth.ui;
 
+import com.example.auth.validator.PasswordPolicyValidator;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
@@ -43,6 +44,11 @@ public class AuthUiController {
      * Style orange pour les messages moyens.
      */
     private static final String STYLE_ORANGE = "-fx-text-fill: orange;";
+
+    /**
+     * Validateur de mot de passe.
+     */
+    private final PasswordPolicyValidator passwordPolicyValidator = new PasswordPolicyValidator();
 
     /**
      * Champ pour saisir le nom.
@@ -138,7 +144,7 @@ public class AuthUiController {
             return;
         }
 
-        if (!isPasswordValid(password)) {
+        if (!passwordPolicyValidator.isValid(password)) {
             messageLabel.setText("Mot de passe trop faible");
             messageLabel.setStyle(STYLE_RED);
             return;
@@ -203,7 +209,7 @@ public class AuthUiController {
             password = "";
         }
 
-        if (!isPasswordValid(password)) {
+        if (!passwordPolicyValidator.isValid(password)) {
             passwordStrengthLabel.setText("Force : faible");
             passwordStrengthLabel.setStyle(STYLE_RED);
             return;
@@ -238,44 +244,6 @@ public class AuthUiController {
             passwordMatchLabel.setText("Les mots de passe sont differents");
             passwordMatchLabel.setStyle(STYLE_RED);
         }
-    }
-
-    /**
-     * Verifie si un mot de passe respecte la regle minimale :
-     * 12 caracteres minimum,
-     * une majuscule,
-     * une minuscule,
-     * un chiffre,
-     * un caractere special.
-     *
-     * @param password mot de passe a verifier
-     * @return true si le mot de passe est valide, sinon false
-     */
-    private boolean isPasswordValid(String password) {
-        if (password == null || password.length() < 12) {
-            return false;
-        }
-
-        boolean hasUppercase = false;
-        boolean hasLowercase = false;
-        boolean hasDigit = false;
-        boolean hasSpecial = false;
-
-        for (int i = 0; i < password.length(); i++) {
-            char c = password.charAt(i);
-
-            if (Character.isUpperCase(c)) {
-                hasUppercase = true;
-            } else if (Character.isLowerCase(c)) {
-                hasLowercase = true;
-            } else if (Character.isDigit(c)) {
-                hasDigit = true;
-            } else {
-                hasSpecial = true;
-            }
-        }
-
-        return hasUppercase && hasLowercase && hasDigit && hasSpecial;
     }
 
     /**

@@ -1,24 +1,26 @@
 package com.example.auth.validator;
 
 /**
- * Verifie si un mot de passe respecte la politique demandee au TP2.
- *
- * Regles :
- * - 12 caracteres minimum
- * - 1 majuscule
- * - 1 minuscule
- * - 1 chiffre
- * - 1 caractere special
+ * Classe chargee de verifier si un mot de passe respecte
+ * la politique minimale de securite.
  */
 public class PasswordPolicyValidator {
 
+    /**
+     * Verifie si un mot de passe est valide.
+     *
+     * Regles :
+     * - 12 caracteres minimum
+     * - au moins une majuscule
+     * - au moins une minuscule
+     * - au moins un chiffre
+     * - au moins un caractere special
+     *
+     * @param password mot de passe a verifier
+     * @return true si le mot de passe est valide, sinon false
+     */
     public boolean isValid(String password) {
-
-        if (password == null) {
-            return false;
-        }
-
-        if (password.length() < 12) {
+        if (password == null || password.length() < 12) {
             return false;
         }
 
