@@ -12,7 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
  */
 @SpringBootTest(classes = AuthApplication.class)
 @ActiveProfiles("test")
-class AuthApplicationTests {
+public class AuthApplicationTests {
 
     /**
      * Vérifie que le contexte Spring se charge sans erreur.

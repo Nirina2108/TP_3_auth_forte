@@ -28,6 +28,16 @@ import java.util.Map;
 public class AuthController {
 
     /**
+     * Clé utilisée pour les messages JSON.
+     */
+    private static final String KEY_MESSAGE = "message";
+
+    /**
+     * Préfixe Bearer utilisé dans l'en-tête Authorization.
+     */
+    private static final String BEARER_PREFIX = "Bearer ";
+
+    /**
      * Service d'authentification.
      */
     private final AuthService authService;
@@ -39,6 +49,26 @@ public class AuthController {
      */
     public AuthController(AuthService authService) {
         this.authService = authService;
+    }
+
+    /**
+     * Vérifie si une chaîne est vide.
+     *
+     * @param value valeur à tester
+     * @return true si la valeur est nulle ou vide
+     */
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    /**
+     * Extrait le token depuis l'en-tête Authorization.
+     *
+     * @param authorizationHeader en-tête Authorization
+     * @return token extrait
+     */
+    private String extractToken(String authorizationHeader) {
+        return authorizationHeader.replace(BEARER_PREFIX, "");
     }
 
     /**
@@ -73,11 +103,11 @@ public class AuthController {
     public Map<String, Object> protectedRoute(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
-        if (authorizationHeader == null || authorizationHeader.isBlank()) {
-            return Map.of("message", "Token manquant");
+        if (isBlank(authorizationHeader)) {
+            return Map.of(KEY_MESSAGE, "Token manquant");
         }
 
-        String token = authorizationHeader.replace("Bearer ", "");
+        String token = extractToken(authorizationHeader);
         return authService.accessProtectedData(token);
     }
 }
