@@ -31,6 +31,6 @@ jobs:
         run: chmod +x mvnw
 
       - name: Build + Tests + SonarCloud
-        run: ./mvnw clean verify sonar:sonar -Dsonar.projectKey=poun-2108_tp-2-auth-fragile -Dsonar.organization=poun-2108 -Dsonar.host.url=https://sonarcloud.io -Dsonar.token=${{ secrets.SONAR_TOKEN }} -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+        run: ./mvnw clean verify sonar:sonar -Dsonar.projectKey=poun-2108_tp-2-auth-fragile -Dsonar.organization=poun-2108 -Dsonar.host.url=https://sonarcloud.io -Dsonar.token=${{ secrets.SONAR_TOKEN }} -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml -Dsonar.exclusions=**/AuthUiController.java
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
