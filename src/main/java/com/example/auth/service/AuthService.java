@@ -24,6 +24,11 @@ import java.util.UUID;
 public class AuthService {
 
     /**
+     * Clé utilisée pour les messages des réponses.
+     */
+    private static final String KEY_MESSAGE = "message";
+
+    /**
      * Repository utilisateur.
      */
     private final UserRepository userRepository;
@@ -43,6 +48,16 @@ public class AuthService {
     }
 
     /**
+     * Vérifie si une chaîne est vide.
+     *
+     * @param valeur valeur à tester
+     * @return true si la valeur est nulle ou vide
+     */
+    private boolean estVide(String valeur) {
+        return valeur == null || valeur.isBlank();
+    }
+
+    /**
      * Inscrit un utilisateur.
      *
      * @param request données d'inscription
@@ -51,23 +66,23 @@ public class AuthService {
     public Map<String, Object> register(RegisterRequest request) {
         Map<String, Object> response = new HashMap<>();
 
-        if (request.getName() == null || request.getName().isBlank()) {
-            response.put("message", "Nom obligatoire");
+        if (estVide(request.getName())) {
+            response.put(KEY_MESSAGE, "Nom obligatoire");
             return response;
         }
 
-        if (request.getEmail() == null || request.getEmail().isBlank()) {
-            response.put("message", "Email obligatoire");
+        if (estVide(request.getEmail())) {
+            response.put(KEY_MESSAGE, "Email obligatoire");
             return response;
         }
 
-        if (request.getPassword() == null || request.getPassword().isBlank()) {
-            response.put("message", "Mot de passe obligatoire");
+        if (estVide(request.getPassword())) {
+            response.put(KEY_MESSAGE, "Mot de passe obligatoire");
             return response;
         }
 
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            response.put("message", "Email deja utilise");
+            response.put(KEY_MESSAGE, "Email deja utilise");
             return response;
         }
 
@@ -78,7 +93,7 @@ public class AuthService {
 
         userRepository.save(user);
 
-        response.put("message", "Inscription reussie");
+        response.put(KEY_MESSAGE, "Inscription reussie");
         response.put("user", user);
 
         return response;
@@ -93,32 +108,32 @@ public class AuthService {
     public Map<String, Object> login(LoginRequest request) {
         Map<String, Object> response = new HashMap<>();
 
-        if (request.getEmail() == null || request.getEmail().isBlank()) {
-            response.put("message", "Email obligatoire");
+        if (estVide(request.getEmail())) {
+            response.put(KEY_MESSAGE, "Email obligatoire");
             return response;
         }
 
-        if (request.getPassword() == null || request.getPassword().isBlank()) {
-            response.put("message", "Mot de passe obligatoire");
+        if (estVide(request.getPassword())) {
+            response.put(KEY_MESSAGE, "Mot de passe obligatoire");
             return response;
         }
 
         User user = userRepository.findByEmail(request.getEmail()).orElse(null);
 
         if (user == null) {
-            response.put("message", "Utilisateur introuvable");
+            response.put(KEY_MESSAGE, "Utilisateur introuvable");
             return response;
         }
 
         if (!user.getPassword().equals(request.getPassword())) {
-            response.put("message", "Mot de passe incorrect");
+            response.put(KEY_MESSAGE, "Mot de passe incorrect");
             return response;
         }
 
         String token = UUID.randomUUID().toString();
         tokens.put(token, user.getId());
 
-        response.put("message", "Connexion reussie");
+        response.put(KEY_MESSAGE, "Connexion reussie");
         response.put("token", token);
 
         return response;
@@ -144,11 +159,11 @@ public class AuthService {
         Map<String, Object> response = new HashMap<>();
 
         if (!isTokenValid(token)) {
-            response.put("message", "Acces refuse");
+            response.put(KEY_MESSAGE, "Acces refuse");
             return response;
         }
 
-        response.put("message", "Acces autorise");
+        response.put(KEY_MESSAGE, "Acces autorise");
         response.put("secret", "Donnees protegees fragiles");
 
         return response;

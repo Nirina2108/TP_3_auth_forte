@@ -24,12 +24,6 @@ public class RegisterRequest {
     private String password;
 
     /**
-     * Constructeur vide.
-     */
-    public RegisterRequest() {
-    }
-
-    /**
      * Retourne le nom.
      *
      * @return nom

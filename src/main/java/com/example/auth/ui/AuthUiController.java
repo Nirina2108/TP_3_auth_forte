@@ -25,6 +25,26 @@ import java.nio.charset.StandardCharsets;
 public class AuthUiController {
 
     /**
+     * URL de base de l'API d'authentification.
+     */
+    private static final String API_URL = "http://localhost:8082/api/auth";
+
+    /**
+     * Style rouge pour les messages d'erreur.
+     */
+    private static final String STYLE_RED = "-fx-text-fill: red;";
+
+    /**
+     * Style vert pour les messages de succes.
+     */
+    private static final String STYLE_GREEN = "-fx-text-fill: green;";
+
+    /**
+     * Style orange pour les messages moyens.
+     */
+    private static final String STYLE_ORANGE = "-fx-text-fill: orange;";
+
+    /**
      * Champ pour saisir le nom.
      */
     @FXML
@@ -67,11 +87,6 @@ public class AuthUiController {
     private Label messageLabel;
 
     /**
-     * URL de base de l'API d'authentification.
-     */
-    private final String apiUrl = "http://localhost:8082/api/auth";
-
-    /**
      * Methode appelee automatiquement au chargement de l'interface.
      * Elle ajoute des ecouteurs pour mettre a jour
      * la force du mot de passe et la confirmation.
@@ -83,9 +98,19 @@ public class AuthUiController {
             updatePasswordMatch();
         });
 
-        passwordConfirmField.textProperty().addListener((observable, oldValue, newValue) -> {
-            updatePasswordMatch();
-        });
+        passwordConfirmField.textProperty().addListener((observable, oldValue, newValue) ->
+                updatePasswordMatch()
+        );
+    }
+
+    /**
+     * Verifie si une chaine est vide.
+     *
+     * @param value valeur a tester
+     * @return true si la valeur est nulle ou vide
+     */
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     /**
@@ -101,24 +126,21 @@ public class AuthUiController {
         String password = passwordField.getText();
         String passwordConfirm = passwordConfirmField.getText();
 
-        if (name == null || name.isBlank()
-                || email == null || email.isBlank()
-                || password == null || password.isBlank()
-                || passwordConfirm == null || passwordConfirm.isBlank()) {
+        if (isBlank(name) || isBlank(email) || isBlank(password) || isBlank(passwordConfirm)) {
             messageLabel.setText("Nom, email, mot de passe et confirmation obligatoires");
-            messageLabel.setStyle("-fx-text-fill: red;");
+            messageLabel.setStyle(STYLE_RED);
             return;
         }
 
         if (!password.equals(passwordConfirm)) {
             messageLabel.setText("Les mots de passe ne sont pas identiques");
-            messageLabel.setStyle("-fx-text-fill: red;");
+            messageLabel.setStyle(STYLE_RED);
             return;
         }
 
         if (!isPasswordValid(password)) {
             messageLabel.setText("Mot de passe trop faible");
-            messageLabel.setStyle("-fx-text-fill: red;");
+            messageLabel.setStyle(STYLE_RED);
             return;
         }
 
@@ -129,12 +151,12 @@ public class AuthUiController {
                 + "}";
 
         try {
-            String result = sendPost(apiUrl + "/register", json);
+            String result = sendPost(API_URL + "/register", json);
             messageLabel.setText("Inscription reussie : " + result);
-            messageLabel.setStyle("-fx-text-fill: green;");
+            messageLabel.setStyle(STYLE_GREEN);
         } catch (Exception e) {
             messageLabel.setText("Erreur inscription : " + e.getMessage());
-            messageLabel.setStyle("-fx-text-fill: red;");
+            messageLabel.setStyle(STYLE_RED);
         }
     }
 
@@ -148,9 +170,9 @@ public class AuthUiController {
         String email = emailField.getText();
         String password = passwordField.getText();
 
-        if (email == null || email.isBlank() || password == null || password.isBlank()) {
+        if (isBlank(email) || isBlank(password)) {
             messageLabel.setText("Email et mot de passe obligatoires");
-            messageLabel.setStyle("-fx-text-fill: red;");
+            messageLabel.setStyle(STYLE_RED);
             return;
         }
 
@@ -160,12 +182,12 @@ public class AuthUiController {
                 + "}";
 
         try {
-            String result = sendPost(apiUrl + "/login", json);
+            String result = sendPost(API_URL + "/login", json);
             messageLabel.setText("Connexion reussie : " + result);
-            messageLabel.setStyle("-fx-text-fill: green;");
+            messageLabel.setStyle(STYLE_GREEN);
         } catch (Exception e) {
             messageLabel.setText("Erreur connexion : " + e.getMessage());
-            messageLabel.setStyle("-fx-text-fill: red;");
+            messageLabel.setStyle(STYLE_RED);
         }
     }
 
@@ -183,16 +205,16 @@ public class AuthUiController {
 
         if (!isPasswordValid(password)) {
             passwordStrengthLabel.setText("Force : faible");
-            passwordStrengthLabel.setStyle("-fx-text-fill: red;");
+            passwordStrengthLabel.setStyle(STYLE_RED);
             return;
         }
 
         if (password.length() >= 16) {
             passwordStrengthLabel.setText("Force : forte");
-            passwordStrengthLabel.setStyle("-fx-text-fill: green;");
+            passwordStrengthLabel.setStyle(STYLE_GREEN);
         } else {
             passwordStrengthLabel.setText("Force : moyenne");
-            passwordStrengthLabel.setStyle("-fx-text-fill: orange;");
+            passwordStrengthLabel.setStyle(STYLE_ORANGE);
         }
     }
 
@@ -204,17 +226,17 @@ public class AuthUiController {
         String password = passwordField.getText();
         String confirm = passwordConfirmField.getText();
 
-        if (confirm == null || confirm.isBlank()) {
+        if (isBlank(confirm)) {
             passwordMatchLabel.setText("");
             return;
         }
 
-        if (password.equals(confirm)) {
+        if (password != null && password.equals(confirm)) {
             passwordMatchLabel.setText("Les mots de passe correspondent");
-            passwordMatchLabel.setStyle("-fx-text-fill: green;");
+            passwordMatchLabel.setStyle(STYLE_GREEN);
         } else {
             passwordMatchLabel.setText("Les mots de passe sont differents");
-            passwordMatchLabel.setStyle("-fx-text-fill: red;");
+            passwordMatchLabel.setStyle(STYLE_RED);
         }
     }
 
@@ -291,9 +313,9 @@ public class AuthUiController {
 
         if (code >= 200 && code < 300) {
             return responseBody;
-        } else {
-            throw new IOException("HTTP " + code + " : " + responseBody);
         }
+
+        throw new IOException("HTTP " + code + " : " + responseBody);
     }
 
     /**
@@ -308,7 +330,10 @@ public class AuthUiController {
             return "";
         }
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(stream, StandardCharsets.UTF_8)
+        );
+
         StringBuilder result = new StringBuilder();
         String line;
 

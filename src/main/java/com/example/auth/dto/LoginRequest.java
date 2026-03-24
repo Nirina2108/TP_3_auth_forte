@@ -19,12 +19,6 @@ public class LoginRequest {
     private String password;
 
     /**
-     * Constructeur vide.
-     */
-    public LoginRequest() {
-    }
-
-    /**
      * Retourne l'email.
      *
      * @return email
