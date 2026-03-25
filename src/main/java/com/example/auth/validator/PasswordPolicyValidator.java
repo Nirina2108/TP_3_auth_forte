@@ -3,24 +3,31 @@ package com.example.auth.validator;
 /**
  * Classe chargee de verifier si un mot de passe respecte
  * la politique minimale de securite.
+ *
+ * Regles :
+ * - 12 caracteres minimum
+ * - au moins une majuscule
+ * - au moins une minuscule
+ * - au moins un chiffre
+ * - au moins un caractere special
+ *
+ * @author Poun
+ * @version 1.0
  */
 public class PasswordPolicyValidator {
 
     /**
      * Verifie si un mot de passe est valide.
      *
-     * Regles :
-     * - 12 caracteres minimum
-     * - au moins une majuscule
-     * - au moins une minuscule
-     * - au moins un chiffre
-     * - au moins un caractere special
-     *
      * @param password mot de passe a verifier
      * @return true si le mot de passe est valide, sinon false
      */
     public boolean isValid(String password) {
-        if (password == null || password.length() < 12) {
+        if (password == null) {
+            return false;
+        }
+
+        if (password.length() < 12) {
             return false;
         }
 

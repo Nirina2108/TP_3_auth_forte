@@ -1,51 +1,85 @@
 package com.example.auth.validator;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
+/**
+ * Tests de la classe PasswordPolicyValidator.
+ *
+ * @author Poun
+ * @version 1.0
+ */
 class PasswordPolicyValidatorTest {
 
-    private final PasswordPolicyValidator validator = new PasswordPolicyValidator();
-
+    /**
+     * Verifie qu'un mot de passe valide est accepte.
+     */
     @Test
-    void shouldReturnFalseWhenPasswordIsNull() {
-        assertFalse(validator.isValid(null));
+    void passwordValide() {
+        PasswordPolicyValidator validator = new PasswordPolicyValidator();
+        Assertions.assertTrue(validator.isValid("Password123!"));
     }
 
+    /**
+     * Verifie qu'un mot de passe trop court est refuse.
+     */
     @Test
-    void shouldReturnFalseWhenPasswordIsTooShort() {
-        assertFalse(validator.isValid("Abc123!"));
+    void passwordTropCourt() {
+        PasswordPolicyValidator validator = new PasswordPolicyValidator();
+        Assertions.assertFalse(validator.isValid("Pass1!"));
     }
 
+    /**
+     * Verifie qu'un mot de passe sans majuscule est refuse.
+     */
     @Test
-    void shouldReturnFalseWhenPasswordHasNoUppercase() {
-        assertFalse(validator.isValid("motdepasse123!"));
+    void passwordSansMajuscule() {
+        PasswordPolicyValidator validator = new PasswordPolicyValidator();
+        Assertions.assertFalse(validator.isValid("password123!"));
     }
 
+    /**
+     * Verifie qu'un mot de passe sans minuscule est refuse.
+     */
     @Test
-    void shouldReturnFalseWhenPasswordHasNoLowercase() {
-        assertFalse(validator.isValid("MOTDEPASSE123!"));
+    void passwordSansMinuscule() {
+        PasswordPolicyValidator validator = new PasswordPolicyValidator();
+        Assertions.assertFalse(validator.isValid("PASSWORD123!"));
     }
 
+    /**
+     * Verifie qu'un mot de passe sans chiffre est refuse.
+     */
     @Test
-    void shouldReturnFalseWhenPasswordHasNoDigit() {
-        assertFalse(validator.isValid("Motdepasse!!!"));
+    void passwordSansChiffre() {
+        PasswordPolicyValidator validator = new PasswordPolicyValidator();
+        Assertions.assertFalse(validator.isValid("PasswordTest!"));
     }
 
+    /**
+     * Verifie qu'un mot de passe sans caractere special est refuse.
+     */
     @Test
-    void shouldReturnFalseWhenPasswordHasNoSpecialChar() {
-        assertFalse(validator.isValid("Motdepasse123"));
+    void passwordSansCaractereSpecial() {
+        PasswordPolicyValidator validator = new PasswordPolicyValidator();
+        Assertions.assertFalse(validator.isValid("Password1234"));
     }
 
+    /**
+     * Verifie qu'un mot de passe null est refuse.
+     */
     @Test
-    void shouldReturnTrueWhenPasswordIsValid() {
-        assertTrue(validator.isValid("Motdepasse123!"));
+    void passwordNull() {
+        PasswordPolicyValidator validator = new PasswordPolicyValidator();
+        Assertions.assertFalse(validator.isValid(null));
     }
 
+    /**
+     * Verifie qu'un mot de passe vide est refuse.
+     */
     @Test
-    void shouldReturnTrueWhenPasswordIsValidAndLong() {
-        assertTrue(validator.isValid("MonSuperMotdepasse123!"));
+    void passwordVide() {
+        PasswordPolicyValidator validator = new PasswordPolicyValidator();
+        Assertions.assertFalse(validator.isValid(""));
     }
 }
