@@ -10,9 +10,6 @@ package com.example.auth.validator;
  * - au moins une minuscule
  * - au moins un chiffre
  * - au moins un caractere special
- *
- * @author Poun
- * @version 1.0
  */
 public class PasswordPolicyValidator {
 
