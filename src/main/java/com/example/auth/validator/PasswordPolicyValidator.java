@@ -10,8 +10,16 @@ package com.example.auth.validator;
  * - au moins une minuscule
  * - au moins un chiffre
  * - au moins un caractere special
+ *
+ * @author Poun
+ * @version 1.0
  */
 public class PasswordPolicyValidator {
+
+    /**
+     * Longueur minimale du mot de passe.
+     */
+    private static final int MIN_LENGTH = 12;
 
     /**
      * Verifie si un mot de passe est valide.
@@ -20,11 +28,7 @@ public class PasswordPolicyValidator {
      * @return true si le mot de passe est valide, sinon false
      */
     public boolean isValid(String password) {
-        if (password == null) {
-            return false;
-        }
-
-        if (password.length() < 12) {
+        if (password == null || password.length() < MIN_LENGTH) {
             return false;
         }
 
@@ -34,13 +38,13 @@ public class PasswordPolicyValidator {
         boolean hasSpecial = false;
 
         for (int i = 0; i < password.length(); i++) {
-            char c = password.charAt(i);
+            char caractere = password.charAt(i);
 
-            if (Character.isUpperCase(c)) {
+            if (Character.isUpperCase(caractere)) {
                 hasUppercase = true;
-            } else if (Character.isLowerCase(c)) {
+            } else if (Character.isLowerCase(caractere)) {
                 hasLowercase = true;
-            } else if (Character.isDigit(c)) {
+            } else if (Character.isDigit(caractere)) {
                 hasDigit = true;
             } else {
                 hasSpecial = true;

@@ -1,58 +1,76 @@
 package com.example.auth.validator;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests de la classe PasswordPolicyValidator.
+ *
+ * @author Poun
+ * @version 1.0
  */
 class PasswordPolicyValidatorTest {
 
+    /**
+     * Validateur a tester.
+     */
+    private final PasswordPolicyValidator validator = new PasswordPolicyValidator();
+
+    /**
+     * Verifie qu'un mot de passe null est invalide.
+     */
     @Test
-    void passwordValide() {
-        PasswordPolicyValidator validator = new PasswordPolicyValidator();
-        Assertions.assertTrue(validator.isValid("Password123!"));
+    void shouldReturnFalseWhenPasswordIsNull() {
+        assertFalse(validator.isValid(null));
     }
 
+    /**
+     * Verifie qu'un mot de passe trop court est invalide.
+     */
     @Test
-    void passwordTropCourt() {
-        PasswordPolicyValidator validator = new PasswordPolicyValidator();
-        Assertions.assertFalse(validator.isValid("Pass1!"));
+    void shouldReturnFalseWhenPasswordIsTooShort() {
+        assertFalse(validator.isValid("Abc1@short"));
     }
 
+    /**
+     * Verifie qu'un mot de passe sans majuscule est invalide.
+     */
     @Test
-    void passwordSansMajuscule() {
-        PasswordPolicyValidator validator = new PasswordPolicyValidator();
-        Assertions.assertFalse(validator.isValid("password123!"));
+    void shouldReturnFalseWhenPasswordHasNoUppercase() {
+        assertFalse(validator.isValid("motdepasse1@aa"));
     }
 
+    /**
+     * Verifie qu'un mot de passe sans minuscule est invalide.
+     */
     @Test
-    void passwordSansMinuscule() {
-        PasswordPolicyValidator validator = new PasswordPolicyValidator();
-        Assertions.assertFalse(validator.isValid("PASSWORD123!"));
+    void shouldReturnFalseWhenPasswordHasNoLowercase() {
+        assertFalse(validator.isValid("MOTDEPASSE1@A"));
     }
 
+    /**
+     * Verifie qu'un mot de passe sans chiffre est invalide.
+     */
     @Test
-    void passwordSansChiffre() {
-        PasswordPolicyValidator validator = new PasswordPolicyValidator();
-        Assertions.assertFalse(validator.isValid("PasswordTest!"));
+    void shouldReturnFalseWhenPasswordHasNoDigit() {
+        assertFalse(validator.isValid("MotDePasse@@@"));
     }
 
+    /**
+     * Verifie qu'un mot de passe sans caractere special est invalide.
+     */
     @Test
-    void passwordSansCaractereSpecial() {
-        PasswordPolicyValidator validator = new PasswordPolicyValidator();
-        Assertions.assertFalse(validator.isValid("Password1234"));
+    void shouldReturnFalseWhenPasswordHasNoSpecialCharacter() {
+        assertFalse(validator.isValid("MotDePasse123"));
     }
 
+    /**
+     * Verifie qu'un mot de passe complet est valide.
+     */
     @Test
-    void passwordNull() {
-        PasswordPolicyValidator validator = new PasswordPolicyValidator();
-        Assertions.assertFalse(validator.isValid(null));
-    }
-
-    @Test
-    void passwordVide() {
-        PasswordPolicyValidator validator = new PasswordPolicyValidator();
-        Assertions.assertFalse(validator.isValid(""));
+    void shouldReturnTrueWhenPasswordIsStrong() {
+        assertTrue(validator.isValid("MotDePasse1@"));
     }
 }
