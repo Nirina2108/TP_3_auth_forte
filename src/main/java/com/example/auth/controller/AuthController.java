@@ -1,8 +1,11 @@
 package com.example.auth.controller;
 
+import com.example.auth.dto.ClientProofRequest;
+import com.example.auth.dto.ClientProofResponse;
 import com.example.auth.dto.LoginRequest;
 import com.example.auth.dto.RegisterRequest;
 import com.example.auth.service.AuthService;
+import com.example.auth.service.ClientProofService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,69 +16,45 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
- * Contrôleur REST d'authentification.
+ * Controller REST pour l'authentification.
  *
- * Routes disponibles :
- * - POST /api/auth/register
- * - POST /api/auth/login
- * - GET /api/auth/protected
+ * TP3 :
+ * - préparation de la preuve HMAC côté client
+ * - transition vers un login sans mot de passe transmis
  *
  * @author Poun
- * @version 1.0
+ * @version 3.2
  */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     /**
-     * Clé utilisée pour les messages JSON.
-     */
-    private static final String KEY_MESSAGE = "message";
-
-    /**
-     * Préfixe Bearer utilisé dans l'en-tête Authorization.
-     */
-    private static final String BEARER_PREFIX = "Bearer ";
-
-    /**
-     * Service d'authentification.
+     * Service principal d'authentification.
      */
     private final AuthService authService;
 
     /**
-     * Constructeur du contrôleur.
-     *
-     * @param authService service d'authentification
+     * Service de simulation du client HMAC.
      */
-    public AuthController(AuthService authService) {
+    private final ClientProofService clientProofService;
+
+    /**
+     * Constructeur.
+     *
+     * @param authService service auth
+     * @param clientProofService service client simulé
+     */
+    public AuthController(AuthService authService, ClientProofService clientProofService) {
         this.authService = authService;
+        this.clientProofService = clientProofService;
     }
 
     /**
-     * Vérifie si une chaîne est vide.
-     *
-     * @param value valeur à tester
-     * @return true si la valeur est nulle ou vide
-     */
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
-
-    /**
-     * Extrait le token depuis l'en-tête Authorization.
-     *
-     * @param authorizationHeader en-tête Authorization
-     * @return token extrait
-     */
-    private String extractToken(String authorizationHeader) {
-        return authorizationHeader.replace(BEARER_PREFIX, "");
-    }
-
-    /**
-     * Inscription d'un utilisateur.
+     * Endpoint d'inscription.
      *
      * @param request données d'inscription
-     * @return réponse JSON
+     * @return réponse simple
      */
     @PostMapping("/register")
     public Map<String, Object> register(@RequestBody RegisterRequest request) {
@@ -83,10 +62,14 @@ public class AuthController {
     }
 
     /**
-     * Connexion d'un utilisateur.
+     * Endpoint de connexion.
      *
-     * @param request données de connexion
-     * @return réponse JSON avec token
+     * Pour l'étape 3.2, on reçoit déjà la structure TP3 :
+     * email + nonce + timestamp + hmac.
+     * La vraie vérification côté serveur sera branchée en 3.3.
+     *
+     * @param request preuve de connexion
+     * @return réponse temporaire
      */
     @PostMapping("/login")
     public Map<String, Object> login(@RequestBody LoginRequest request) {
@@ -94,20 +77,41 @@ public class AuthController {
     }
 
     /**
-     * Route protégée.
+     * Endpoint utilitaire pour simuler le calcul côté client.
      *
-     * @param authorizationHeader en-tête Authorization
-     * @return réponse d'accès
+     * Cet endpoint est pédagogique pour Postman et les tests du TP.
+     *
+     * @param request email + password
+     * @return preuve complète
      */
-    @GetMapping("/protected")
-    public Map<String, Object> protectedRoute(
+    @PostMapping("/client-proof")
+    public ClientProofResponse buildClientProof(@RequestBody ClientProofRequest request) {
+        return clientProofService.buildProof(request);
+    }
+
+    /**
+     * Endpoint pour récupérer l'utilisateur connecté.
+     *
+     * @param authorizationHeader header Authorization
+     * @return infos utilisateur
+     */
+    @GetMapping("/me")
+    public Map<String, Object> me(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
-        if (isBlank(authorizationHeader)) {
-            return Map.of(KEY_MESSAGE, "Token manquant");
-        }
+        return authService.getMe(authorizationHeader);
+    }
 
-        String token = extractToken(authorizationHeader);
-        return authService.accessProtectedData(token);
+    /**
+     * Endpoint de déconnexion.
+     *
+     * @param authorizationHeader header Authorization
+     * @return message de déconnexion
+     */
+    @PostMapping("/logout")
+    public Map<String, Object> logout(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        return authService.logout(authorizationHeader);
     }
 }

@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * Classe principale de l'application Spring Boot.
+ * Point d'entrée principal de l'application Spring Boot.
  *
  * @author Poun
  * @version 1.0
@@ -13,9 +13,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class AuthApplication {
 
     /**
-     * Point d'entrée de l'application.
+     * Méthode principale de lancement.
      *
-     * @param args arguments du programme
+     * @param args arguments de démarrage
      */
     public static void main(String[] args) {
         SpringApplication.run(AuthApplication.class, args);

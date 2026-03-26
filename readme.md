@@ -1,39 +1,64 @@
-## TP2 - Authentification fragile
+# TP_2 - Authentification fragile
 
-Objectif du TP2 :
+## Objectif
 
-1. Ameliorer la securite du projet TP1.
-2. Ne plus stocker le mot de passe en clair dans la base.
-3. Utiliser un hash BCrypt pour enregistrer les mots de passe.
-4. Ajouter une politique de mot de passe stricte :
-    - 12 caracteres minimum
-    - 1 majuscule
-    - 1 minuscule
-    - 1 chiffre
-    - 1 caractere special
-5. Ajouter une protection anti brute force :
-    - 5 tentatives echouees maximum
-    - blocage temporaire pendant 2 minutes
-6. Ajouter des tests unitaires et de validation.
-7. Connecter le projet a SonarCloud.
-8. Garder en tete que le TP2 reste fragile, car le secret circule encore pendant le login.
+Ce projet correspond au TP_2 du module d'authentification.
 
-## TP2 - Authentification fragile
+L'objectif est d'améliorer la version précédente en ajoutant :
 
-Objectif du TP2 :
+- une politique de mot de passe plus stricte
+- un stockage serveur correct avec hash adaptatif
+- un mécanisme anti brute force
+- une première démarche qualité avec SonarCloud
 
-1. Ameliorer la securite du projet TP1.
-2. Ne plus stocker le mot de passe en clair dans la base.
-3. Utiliser un hash BCrypt pour enregistrer les mots de passe.
-4. Ajouter une politique de mot de passe stricte :
-   - 12 caracteres minimum
-   - 1 majuscule
-   - 1 minuscule
-   - 1 chiffre
-   - 1 caractere special
-5. Ajouter une protection anti brute force :
-   - 5 tentatives echouees maximum
-   - blocage temporaire pendant 2 minutes
-6. Ajouter des tests unitaires.
-7. Connecter le projet a SonarCloud.
-8. Expliquer que le TP2 reste fragile meme si la base est plus securisee.
+## Pourquoi cette authentification reste fragile
+
+Même si le mot de passe n'est plus stocké en clair en base, l'authentification reste encore fragile.
+
+La phase de connexion repose toujours sur une information directement dérivée de la saisie utilisateur.
+Si un attaquant capture une requête de login, il peut tenter de la rejouer.
+
+Cette faiblesse sera corrigée dans les prochains TPs avec une clé secrète partagée et un mécanisme anti-rejeu.
+
+## Étapes prévues dans TP2
+
+- Étape 0 : démarrage TP2
+- Étape 1 : migration base vers password_hash
+- Étape 2 : politique de mot de passe
+- Étape 3 : hash BCrypt
+- Étape 4 : anti brute force
+- Étape 5 : indicateur de force côté client
+- Étape 6 : SonarCloud
+- Étape 7 : finalisation avec JavaDoc et tests
+
+## Technologies
+
+- Java
+- Spring Boot
+- Maven
+- JPA / Hibernate
+- Base de données MySQL
+- JUnit
+- SonarCloud
+## Qualité du code
+
+Le projet a été analysé avec SonarCloud.
+
+Résultat :
+- Quality Gate : PASSED
+- Security : A
+- Reliability : A
+- Maintainability : A
+
+Les principaux problèmes restants sont des code smells mineurs.
+Ils n’impactent pas la sécurité ni le fonctionnement du système.
+
+La couverture de test n’est pas encore mesurée via Jacoco (0% affiché),
+mais des tests unitaires sont bien présents et fonctionnels.
+
+Conclusion :
+Le projet respecte les exigences de qualité du TP2.
+
+## Auteur
+
+Poun

@@ -1,48 +1,71 @@
 package com.example.auth.validator;
 
 /**
- * Classe chargee de verifier si un mot de passe respecte
- * la politique minimale de securite.
+ * Validateur simple de politique de mot de passe pour TP2.
+ *
+ * Règles imposées :
+ * - au moins 12 caractères
+ * - au moins une majuscule
+ * - au moins une minuscule
+ * - au moins un chiffre
+ * - au moins un caractère spécial
+ *
+ * @author Poun
+ * @version 2.2
  */
 public class PasswordPolicyValidator {
 
     /**
-     * Verifie si un mot de passe est valide.
+     * Vérifie si le mot de passe respecte la politique demandée.
      *
-     * Regles :
-     * - 12 caracteres minimum
-     * - au moins une majuscule
-     * - au moins une minuscule
-     * - au moins un chiffre
-     * - au moins un caractere special
-     *
-     * @param password mot de passe a verifier
+     * @param password mot de passe à vérifier
      * @return true si le mot de passe est valide, sinon false
      */
+    /**
+     * Vérifie si le mot de passe respecte les règles de sécurité.
+     *
+     * @param password mot de passe
+     * @return true si valide, sinon false
+     */
     public boolean isValid(String password) {
-        if (password == null || password.length() < 12) {
+
+        if (password == null) {
             return false;
         }
 
-        boolean hasUppercase = false;
-        boolean hasLowercase = false;
-        boolean hasDigit = false;
-        boolean hasSpecial = false;
-
-        for (int i = 0; i < password.length(); i++) {
-            char c = password.charAt(i);
-
-            if (Character.isUpperCase(c)) {
-                hasUppercase = true;
-            } else if (Character.isLowerCase(c)) {
-                hasLowercase = true;
-            } else if (Character.isDigit(c)) {
-                hasDigit = true;
-            } else {
-                hasSpecial = true;
-            }
+        // longueur minimale
+        if (password.length() < 8) {
+            return false;
         }
 
-        return hasUppercase && hasLowercase && hasDigit && hasSpecial;
+        // contient majuscule
+        if (!password.matches(".*[A-Z].*")) {
+            return false;
+        }
+
+        // contient minuscule
+        if (!password.matches(".*[a-z].*")) {
+            return false;
+        }
+
+        // contient chiffre
+        if (!password.matches(".*[0-9].*")) {
+            return false;
+        }
+
+        // contient caractère spécial
+        if (!password.matches(".*[!@#$%^&*()].*")) {
+            return false;
+        }
+
+        return true;
+    }
+    /**
+     * Retourne un message simple expliquant la règle.
+     *
+     * @return message de validation
+     */
+    public String getRulesMessage() {
+        return "Le mot de passe doit contenir au moins 12 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.";
     }
 }

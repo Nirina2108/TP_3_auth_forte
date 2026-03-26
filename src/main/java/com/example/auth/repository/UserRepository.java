@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 /**
- * Repository permettant de manipuler les utilisateurs.
+ * Repository pour gérer les utilisateurs.
  *
  * @author Poun
  * @version 1.0
@@ -17,7 +17,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * Recherche un utilisateur par email.
      *
      * @param email email recherché
-     * @return utilisateur trouvé ou vide
+     * @return utilisateur optionnel
      */
     Optional<User> findByEmail(String email);
+
+    /**
+     * Recherche un utilisateur par token.
+     *
+     * @param token token recherché
+     * @return utilisateur optionnel
+     */
+    Optional<User> findByToken(String token);
 }
