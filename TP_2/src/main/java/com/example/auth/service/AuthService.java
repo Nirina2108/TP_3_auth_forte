@@ -29,6 +29,16 @@ import java.util.UUID;
 public class AuthService {
 
     /**
+     * Clé standard pour les erreurs dans les réponses.
+     */
+    private static final String KEY_ERROR = "error";
+
+    /**
+     * Clé standard pour les messages dans les réponses.
+     */
+    private static final String KEY_MESSAGE = "message";
+
+    /**
      * Durée de vie du token en minutes.
      */
     private static final int TOKEN_DURATION_MINUTES = 15;
@@ -86,12 +96,12 @@ public class AuthService {
         Map<String, Object> response = new HashMap<>();
 
         if (request.getPassword() == null || !passwordPolicyValidator.isValid(request.getPassword())) {
-            response.put("error", passwordPolicyValidator.getRulesMessage());
+            response.put(KEY_ERROR, passwordPolicyValidator.getRulesMessage());
             return response;
         }
 
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            response.put("error", "Email déjà utilisé");
+            response.put(KEY_ERROR, "Email déjà utilisé");
             return response;
         }
 
@@ -105,7 +115,7 @@ public class AuthService {
 
         userRepository.save(user);
 
-        response.put("message", "Inscription réussie");
+        response.put(KEY_MESSAGE, "Inscription réussie");
         return response;
     }
 
@@ -119,29 +129,29 @@ public class AuthService {
         Map<String, Object> response = new HashMap<>();
 
         if (request.getEmail() == null || request.getEmail().isBlank()) {
-            response.put("error", "Email obligatoire");
+            response.put(KEY_ERROR, "Email obligatoire");
             return response;
         }
 
         if (request.getNonce() == null || request.getNonce().isBlank()) {
-            response.put("error", "Nonce obligatoire");
+            response.put(KEY_ERROR, "Nonce obligatoire");
             return response;
         }
 
         if (request.getTimestamp() <= 0) {
-            response.put("error", "Timestamp obligatoire");
+            response.put(KEY_ERROR, "Timestamp obligatoire");
             return response;
         }
 
         if (request.getHmac() == null || request.getHmac().isBlank()) {
-            response.put("error", "HMAC obligatoire");
+            response.put(KEY_ERROR, "HMAC obligatoire");
             return response;
         }
 
         User user = userRepository.findByEmail(request.getEmail()).orElse(null);
 
         if (user == null) {
-            response.put("error", "Utilisateur introuvable");
+            response.put(KEY_ERROR, "Utilisateur introuvable");
             return response;
         }
 
@@ -149,12 +159,12 @@ public class AuthService {
         long diff = Math.abs(now - request.getTimestamp());
 
         if (diff > 300) {
-            response.put("error", "Requête expirée");
+            response.put(KEY_ERROR, "Requête expirée");
             return response;
         }
 
         if (authNonceRepository.findByUserAndNonce(user, request.getNonce()).isPresent()) {
-            response.put("error", "Nonce déjà utilisé");
+            response.put(KEY_ERROR, "Nonce déjà utilisé");
             return response;
         }
 
@@ -169,7 +179,7 @@ public class AuthService {
         String expectedHmac = hmacService.hmacSha256(decryptedPassword, message);
 
         if (!constantTimeEquals(expectedHmac, request.getHmac())) {
-            response.put("error", "HMAC invalide");
+            response.put(KEY_ERROR, "HMAC invalide");
             return response;
         }
 
@@ -194,7 +204,7 @@ public class AuthService {
         Map<String, Object> response = new HashMap<>();
 
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            response.put("error", "Token manquant ou invalide");
+            response.put(KEY_ERROR, "Token manquant ou invalide");
             return response;
         }
 
@@ -203,12 +213,12 @@ public class AuthService {
         User user = userRepository.findByToken(token).orElse(null);
 
         if (user == null) {
-            response.put("error", "Utilisateur non trouvé pour ce token");
+            response.put(KEY_ERROR, "Utilisateur non trouvé pour ce token");
             return response;
         }
 
         if (user.getTokenExpiresAt() == null || user.getTokenExpiresAt().isBefore(LocalDateTime.now())) {
-            response.put("error", "Token expiré ou invalide");
+            response.put(KEY_ERROR, "Token expiré ou invalide");
             return response;
         }
 
@@ -231,7 +241,7 @@ public class AuthService {
         Map<String, Object> response = new HashMap<>();
 
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            response.put("error", "Token manquant ou invalide");
+            response.put(KEY_ERROR, "Token manquant ou invalide");
             return response;
         }
 
@@ -240,7 +250,7 @@ public class AuthService {
         User user = userRepository.findByToken(token).orElse(null);
 
         if (user == null) {
-            response.put("error", "Utilisateur non trouvé");
+            response.put(KEY_ERROR, "Utilisateur non trouvé");
             return response;
         }
 
@@ -248,7 +258,7 @@ public class AuthService {
         user.setTokenExpiresAt(null);
         userRepository.save(user);
 
-        response.put("message", "Déconnexion réussie");
+        response.put(KEY_MESSAGE, "Déconnexion réussie");
         return response;
     }
 
@@ -268,7 +278,7 @@ public class AuthService {
         user.setTokenExpiresAt(expiresAt);
         userRepository.save(user);
 
-        response.put("message", "Connexion réussie");
+        response.put(KEY_MESSAGE, "Connexion réussie");
         response.put("accessToken", token);
         response.put("expiresAt", expiresAt);
         response.put("email", user.getEmail());

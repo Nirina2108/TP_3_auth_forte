@@ -21,35 +21,45 @@ public class PasswordPolicyValidator {
      * @param password mot de passe à vérifier
      * @return true si le mot de passe est valide, sinon false
      */
+    /**
+     * Vérifie si le mot de passe respecte les règles de sécurité.
+     *
+     * @param password mot de passe
+     * @return true si valide, sinon false
+     */
     public boolean isValid(String password) {
+
         if (password == null) {
             return false;
         }
 
-        if (password.length() < 12) {
+        // longueur minimale
+        if (password.length() < 8) {
             return false;
         }
 
-        boolean hasUppercase = false;
-        boolean hasLowercase = false;
-        boolean hasDigit = false;
-        boolean hasSpecial = false;
-
-        for (char c : password.toCharArray()) {
-            if (Character.isUpperCase(c)) {
-                hasUppercase = true;
-            } else if (Character.isLowerCase(c)) {
-                hasLowercase = true;
-            } else if (Character.isDigit(c)) {
-                hasDigit = true;
-            } else {
-                hasSpecial = true;
-            }
+        // contient majuscule
+        if (!password.matches(".*[A-Z].*")) {
+            return false;
         }
 
-        return hasUppercase && hasLowercase && hasDigit && hasSpecial;
-    }
+        // contient minuscule
+        if (!password.matches(".*[a-z].*")) {
+            return false;
+        }
 
+        // contient chiffre
+        if (!password.matches(".*[0-9].*")) {
+            return false;
+        }
+
+        // contient caractère spécial
+        if (!password.matches(".*[!@#$%^&*()].*")) {
+            return false;
+        }
+
+        return true;
+    }
     /**
      * Retourne un message simple expliquant la règle.
      *

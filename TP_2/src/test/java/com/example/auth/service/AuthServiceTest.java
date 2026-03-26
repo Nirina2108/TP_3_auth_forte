@@ -411,4 +411,53 @@ public class AuthServiceTest {
 
         Assertions.assertEquals("Utilisateur non trouvé", response.get("error"));
     }
+    @Test
+    void testMeWithoutToken() {
+        Map<String, Object> response = authService.getMe(null);
+        Assertions.assertTrue(response.containsKey("error"));
+    }
+
+    @Test
+    void testLogoutWithoutToken() {
+        Map<String, Object> response = authService.logout(null);
+        Assertions.assertTrue(response.containsKey("error"));
+    }
+    @Test
+    void testGetMeWithoutToken() {
+        Map<String, Object> response = authService.getMe(null);
+        Assertions.assertTrue(response.containsKey("error"));
+    }
+
+    @Test
+    void testLogoutWithoutToken() {
+        Map<String, Object> response = authService.logout(null);
+        Assertions.assertTrue(response.containsKey("error"));
+    }
+
+    @Test
+    void testLoginWithInvalidUser() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("fake@gmail.com");
+        request.setPassword("123");
+
+        Map<String, Object> response = authService.login(request);
+
+        Assertions.assertTrue(response.containsKey("error"));
+    }
+    @Test
+    void testLoginWrongPassword() {
+        RegisterRequest r = new RegisterRequest();
+        r.setName("Test");
+        r.setEmail("test@gmail.com");
+        r.setPassword("Azerty1234!");
+        authService.register(r);
+
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@gmail.com");
+        request.setPassword("wrong");
+
+        Map<String, Object> response = authService.login(request);
+
+        Assertions.assertTrue(response.containsKey("error"));
+    }
 }
