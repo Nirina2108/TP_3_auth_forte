@@ -62,23 +62,13 @@ public class AuthController {
     }
 
     /**
-     * Vérifie si l'en-tête commence bien par Bearer.
-     *
-     * @param authorizationHeader en-tête Authorization
-     * @return true si le format est correct
-     */
-    private boolean hasBearerPrefix(String authorizationHeader) {
-        return authorizationHeader != null && authorizationHeader.startsWith(BEARER_PREFIX);
-    }
-
-    /**
      * Extrait le token depuis l'en-tête Authorization.
      *
      * @param authorizationHeader en-tête Authorization
      * @return token extrait
      */
     private String extractToken(String authorizationHeader) {
-        return authorizationHeader.substring(BEARER_PREFIX.length());
+        return authorizationHeader.replace(BEARER_PREFIX, "");
     }
 
     /**
@@ -115,10 +105,6 @@ public class AuthController {
     ) {
         if (isBlank(authorizationHeader)) {
             return Map.of(KEY_MESSAGE, "Token manquant");
-        }
-
-        if (!hasBearerPrefix(authorizationHeader)) {
-            return Map.of(KEY_MESSAGE, "Format du token invalide");
         }
 
         String token = extractToken(authorizationHeader);

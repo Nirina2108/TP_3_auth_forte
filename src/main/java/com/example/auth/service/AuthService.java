@@ -4,8 +4,6 @@ import com.example.auth.dto.LoginRequest;
 import com.example.auth.dto.RegisterRequest;
 import com.example.auth.entity.User;
 import com.example.auth.repository.UserRepository;
-import com.example.auth.validator.PasswordPolicyValidator;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -15,10 +13,9 @@ import java.util.UUID;
 /**
  * Service contenant la logique métier de l'authentification.
  *
- * Version forte :
- * - validation du mot de passe
- * - mot de passe hashé avec BCrypt
- * - token simple simulé pour le TP
+ * Version fragile :
+ * - mot de passe stocké en clair
+ * - token simple simulé
  *
  * @author Poun
  * @version 1.0
@@ -37,16 +34,6 @@ public class AuthService {
     private final UserRepository userRepository;
 
     /**
-     * Validateur de politique de mot de passe.
-     */
-    private final PasswordPolicyValidator passwordPolicyValidator;
-
-    /**
-     * Encodeur BCrypt pour les mots de passe.
-     */
-    private final BCryptPasswordEncoder passwordEncoder;
-
-    /**
      * Stockage simple des tokens générés.
      */
     private final Map<String, Long> tokens = new HashMap<>();
@@ -58,8 +45,6 @@ public class AuthService {
      */
     public AuthService(UserRepository userRepository) {
         this.userRepository = userRepository;
-        this.passwordPolicyValidator = new PasswordPolicyValidator();
-        this.passwordEncoder = new BCryptPasswordEncoder();
     }
 
     /**
@@ -81,11 +66,6 @@ public class AuthService {
     public Map<String, Object> register(RegisterRequest request) {
         Map<String, Object> response = new HashMap<>();
 
-        if (request == null) {
-            response.put(KEY_MESSAGE, "Requete invalide");
-            return response;
-        }
-
         if (estVide(request.getName())) {
             response.put(KEY_MESSAGE, "Nom obligatoire");
             return response;
@@ -101,11 +81,6 @@ public class AuthService {
             return response;
         }
 
-        if (!passwordPolicyValidator.isValid(request.getPassword())) {
-            response.put(KEY_MESSAGE, "Mot de passe trop faible");
-            return response;
-        }
-
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             response.put(KEY_MESSAGE, "Email deja utilise");
             return response;
@@ -114,7 +89,7 @@ public class AuthService {
         User user = new User();
         user.setName(request.getName());
         user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPassword(request.getPassword());
 
         userRepository.save(user);
 
@@ -133,11 +108,6 @@ public class AuthService {
     public Map<String, Object> login(LoginRequest request) {
         Map<String, Object> response = new HashMap<>();
 
-        if (request == null) {
-            response.put(KEY_MESSAGE, "Requete invalide");
-            return response;
-        }
-
         if (estVide(request.getEmail())) {
             response.put(KEY_MESSAGE, "Email obligatoire");
             return response;
@@ -155,7 +125,7 @@ public class AuthService {
             return response;
         }
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        if (!user.getPassword().equals(request.getPassword())) {
             response.put(KEY_MESSAGE, "Mot de passe incorrect");
             return response;
         }
@@ -176,7 +146,7 @@ public class AuthService {
      * @return true si le token existe
      */
     public boolean isTokenValid(String token) {
-        return token != null && tokens.containsKey(token);
+        return tokens.containsKey(token);
     }
 
     /**
@@ -194,7 +164,7 @@ public class AuthService {
         }
 
         response.put(KEY_MESSAGE, "Acces autorise");
-        response.put("secret", "Donnees protegees fortes");
+        response.put("secret", "Donnees protegees fragiles");
 
         return response;
     }

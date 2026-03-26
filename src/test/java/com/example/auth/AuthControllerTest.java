@@ -1,104 +1,244 @@
-package com.example.auth.controller;
+package com.example.auth;
 
 import com.example.auth.dto.LoginRequest;
 import com.example.auth.dto.RegisterRequest;
-import com.example.auth.service.AuthService;
-import org.junit.jupiter.api.BeforeEach;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 /**
- * Tests de la classe AuthController.
+ * Tests du contrôleur d'authentification.
  *
  * @author Poun
  * @version 1.0
  */
-class AuthControllerTest {
+@SpringBootTest(classes = AuthApplication.class)
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+public class AuthControllerTest {
 
     /**
-     * Service simule.
+     * URL de base des routes d'authentification.
      */
-    private AuthService authService;
+    private static final String AUTH_URL = "/api/auth";
 
     /**
-     * Controleur a tester.
+     * Texte attendu pour une inscription réussie.
      */
-    private AuthController authController;
+    private static final String MSG_REGISTER_OK = "Inscription reussie";
 
     /**
-     * Preparation avant chaque test.
+     * Texte attendu pour une connexion réussie.
      */
-    @BeforeEach
-    void setUp() {
-        authService = mock(AuthService.class);
-        authController = new AuthController(authService);
-    }
+    private static final String MSG_LOGIN_OK = "Connexion reussie";
 
     /**
-     * Verifie que register delegue bien au service.
+     * Texte attendu si email déjà utilisé.
      */
-    @Test
-    void shouldCallServiceRegister() {
+    private static final String MSG_EMAIL_USED = "Email deja utilise";
+
+    /**
+     * Texte attendu si email obligatoire.
+     */
+    private static final String MSG_EMAIL_REQUIRED = "Email obligatoire";
+
+    /**
+     * Texte attendu si mot de passe incorrect.
+     */
+    private static final String MSG_WRONG_PASSWORD = "Mot de passe incorrect";
+
+    /**
+     * Texte attendu si utilisateur introuvable.
+     */
+    private static final String MSG_USER_NOT_FOUND = "Utilisateur introuvable";
+
+    /**
+     * Texte attendu si token manquant.
+     */
+    private static final String MSG_TOKEN_MISSING = "Token manquant";
+
+    /**
+     * Outil pour convertir objet Java en JSON.
+     */
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    /**
+     * Outil pour simuler les appels HTTP.
+     */
+    @Autowired
+    private MockMvc mockMvc;
+
+    /**
+     * Crée une requête d'inscription.
+     *
+     * @param name nom
+     * @param email email
+     * @param password mot de passe
+     * @return objet RegisterRequest
+     */
+    private RegisterRequest buildRegisterRequest(String name, String email, String password) {
         RegisterRequest request = new RegisterRequest();
-        Map<String, Object> expectedResponse = Map.of("message", "Inscription reussie");
-
-        when(authService.register(request)).thenReturn(expectedResponse);
-
-        Map<String, Object> response = authController.register(request);
-
-        assertEquals("Inscription reussie", response.get("message"));
+        request.setName(name);
+        request.setEmail(email);
+        request.setPassword(password);
+        return request;
     }
 
     /**
-     * Verifie que login delegue bien au service.
+     * Crée une requête de connexion.
+     *
+     * @param email email
+     * @param password mot de passe
+     * @return objet LoginRequest
      */
-    @Test
-    void shouldCallServiceLogin() {
+    private LoginRequest buildLoginRequest(String email, String password) {
         LoginRequest request = new LoginRequest();
-        Map<String, Object> expectedResponse = Map.of("message", "Connexion reussie");
-
-        when(authService.login(request)).thenReturn(expectedResponse);
-
-        Map<String, Object> response = authController.login(request);
-
-        assertEquals("Connexion reussie", response.get("message"));
+        request.setEmail(email);
+        request.setPassword(password);
+        return request;
     }
 
     /**
-     * Verifie qu'un header absent retourne un message d'erreur.
+     * Envoie une requête POST /register et retourne la réponse texte.
+     *
+     * @param request données d'inscription
+     * @return contenu texte de la réponse
+     * @throws Exception si erreur
      */
-    @Test
-    void shouldReturnErrorWhenAuthorizationHeaderIsMissing() {
-        Map<String, Object> response = authController.protectedRoute(null);
+    private String postRegister(RegisterRequest request) throws Exception {
+        MvcResult result = mockMvc.perform(
+                org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(AUTH_URL + "/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+        ).andReturn();
 
-        assertEquals("Token manquant", response.get("message"));
+        return result.getResponse().getContentAsString();
     }
 
     /**
-     * Verifie qu'un header mal formate retourne un message d'erreur.
+     * Envoie une requête POST /login et retourne la réponse texte.
+     *
+     * @param request données de connexion
+     * @return contenu texte de la réponse
+     * @throws Exception si erreur
      */
-    @Test
-    void shouldReturnErrorWhenAuthorizationHeaderFormatIsInvalid() {
-        Map<String, Object> response = authController.protectedRoute("abc123");
+    private String postLogin(LoginRequest request) throws Exception {
+        MvcResult result = mockMvc.perform(
+                org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(AUTH_URL + "/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+        ).andReturn();
 
-        assertEquals("Format du token invalide", response.get("message"));
+        return result.getResponse().getContentAsString();
     }
 
     /**
-     * Verifie qu'un token Bearer est bien transmis au service.
+     * Vérifie qu'une inscription valide fonctionne.
+     *
+     * @throws Exception si erreur
      */
     @Test
-    void shouldCallServiceWhenAuthorizationHeaderIsValid() {
-        when(authService.accessProtectedData("abc123"))
-                .thenReturn(Map.of("message", "Acces autorise"));
+    void testRegisterSuccess() throws Exception {
+        RegisterRequest request = buildRegisterRequest("Jean", "jean@gmail.com", "123");
+        String response = postRegister(request);
 
-        Map<String, Object> response = authController.protectedRoute("Bearer abc123");
+        Assertions.assertTrue(response.contains(MSG_REGISTER_OK));
+    }
 
-        verify(authService).accessProtectedData("abc123");
-        assertEquals("Acces autorise", response.get("message"));
+    /**
+     * Vérifie qu'un email déjà utilisé est refusé.
+     *
+     * @throws Exception si erreur
+     */
+    @Test
+    void testRegisterDuplicate() throws Exception {
+        RegisterRequest request = buildRegisterRequest("Sara", "sara@gmail.com", "123");
+
+        postRegister(request);
+        String response = postRegister(request);
+
+        Assertions.assertTrue(response.contains(MSG_EMAIL_USED));
+    }
+
+    /**
+     * Vérifie qu'un email vide est refusé.
+     *
+     * @throws Exception si erreur
+     */
+    @Test
+    void testRegisterWithoutEmail() throws Exception {
+        RegisterRequest request = buildRegisterRequest("Test", "", "123");
+        String response = postRegister(request);
+
+        Assertions.assertTrue(response.contains(MSG_EMAIL_REQUIRED));
+    }
+
+    /**
+     * Vérifie qu'une connexion valide fonctionne.
+     *
+     * @throws Exception si erreur
+     */
+    @Test
+    void testLoginSuccess() throws Exception {
+        RegisterRequest registerRequest = buildRegisterRequest("Marie", "marie@gmail.com", "123");
+        postRegister(registerRequest);
+
+        LoginRequest loginRequest = buildLoginRequest("marie@gmail.com", "123");
+        String response = postLogin(loginRequest);
+
+        Assertions.assertTrue(response.contains(MSG_LOGIN_OK));
+    }
+
+    /**
+     * Vérifie qu'un mauvais mot de passe est refusé.
+     *
+     * @throws Exception si erreur
+     */
+    @Test
+    void testLoginWrongPassword() throws Exception {
+        RegisterRequest registerRequest = buildRegisterRequest("Lucas", "lucas@gmail.com", "123");
+        postRegister(registerRequest);
+
+        LoginRequest loginRequest = buildLoginRequest("lucas@gmail.com", "999");
+        String response = postLogin(loginRequest);
+
+        Assertions.assertTrue(response.contains(MSG_WRONG_PASSWORD));
+    }
+
+    /**
+     * Vérifie qu'un utilisateur absent est refusé.
+     *
+     * @throws Exception si erreur
+     */
+    @Test
+    void testLoginUserNotFound() throws Exception {
+        LoginRequest loginRequest = buildLoginRequest("no@gmail.com", "123");
+        String response = postLogin(loginRequest);
+
+        Assertions.assertTrue(response.contains(MSG_USER_NOT_FOUND));
+    }
+
+    /**
+     * Vérifie qu'un accès protégé sans token est refusé.
+     *
+     * @throws Exception si erreur
+     */
+    @Test
+    void testProtectedWithoutToken() throws Exception {
+        MvcResult result = mockMvc.perform(
+                org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(AUTH_URL + "/protected")
+        ).andReturn();
+
+        String response = result.getResponse().getContentAsString();
+
+        Assertions.assertTrue(response.contains(MSG_TOKEN_MISSING));
     }
 }
