@@ -5,7 +5,6 @@ import com.example.auth.dto.RegisterRequest;
 import com.example.auth.entity.User;
 import com.example.auth.repository.UserRepository;
 import com.example.auth.validator.PasswordPolicyValidator;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -16,26 +15,25 @@ import java.util.UUID;
 /**
  * Service contenant la logique métier de l'authentification.
  *
- * TP2 :
- * - politique de mot de passe
- * - stockage BCrypt
- * - protection anti brute force
+ * TP3 étape 1 :
+ * - stockage réversible du secret utilisateur
+ * - préparation du protocole HMAC + nonce
+ * - login temporairement conservé en mode simple pour la transition
+ *
+ * Limite importante :
+ * le stockage réversible est pédagogique et ne doit pas être considéré
+ * comme une bonne pratique de production.
  *
  * @author Poun
- * @version 2.4
+ * @version 3.1
  */
 @Service
 public class AuthService {
 
     /**
-     * Nombre maximum d'échecs autorisés.
+     * Durée d'un token en minutes.
      */
-    private static final int MAX_FAILED_ATTEMPTS = 5;
-
-    /**
-     * Durée du blocage en minutes.
-     */
-    private static final int LOCK_DURATION_MINUTES = 2;
+    private static final int TOKEN_DURATION_MINUTES = 15;
 
     /**
      * Repository utilisateur.
@@ -43,22 +41,24 @@ public class AuthService {
     private final UserRepository userRepository;
 
     /**
+     * Service de chiffrement réversible.
+     */
+    private final PasswordCryptoService passwordCryptoService;
+
+    /**
      * Validateur de mot de passe.
      */
     private final PasswordPolicyValidator passwordPolicyValidator = new PasswordPolicyValidator();
 
     /**
-     * Encodeur BCrypt pour le hash du mot de passe.
-     */
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-
-    /**
      * Constructeur du service.
      *
      * @param userRepository repository utilisateur
+     * @param passwordCryptoService service de chiffrement
      */
-    public AuthService(UserRepository userRepository) {
+    public AuthService(UserRepository userRepository, PasswordCryptoService passwordCryptoService) {
         this.userRepository = userRepository;
+        this.passwordCryptoService = passwordCryptoService;
     }
 
     /**
@@ -83,10 +83,10 @@ public class AuthService {
         User user = new User();
         user.setName(request.getName());
         user.setEmail(request.getEmail());
-        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setPasswordEncrypted(passwordCryptoService.encrypt(request.getPassword()));
         user.setCreatedAt(LocalDateTime.now());
-        user.setFailedAttempts(0);
-        user.setLockUntil(null);
+        user.setToken(null);
+        user.setTokenExpiresAt(null);
 
         userRepository.save(user);
 
@@ -95,7 +95,11 @@ public class AuthService {
     }
 
     /**
-     * Connexion d'un utilisateur.
+     * Connexion temporaire de transition.
+     *
+     * Pour cette étape 3.1, on garde encore une connexion simple afin de
+     * vérifier que le projet reste fonctionnel après migration du stockage.
+     * Le vrai protocole HMAC arrivera dans les étapes suivantes.
      *
      * @param request données de connexion
      * @return message + token ou erreur
@@ -110,37 +114,23 @@ public class AuthService {
             return response;
         }
 
-        if (user.getLockUntil() != null && user.getLockUntil().isAfter(LocalDateTime.now())) {
-            response.put("error", "Compte bloqué temporairement. Réessayez plus tard.");
-            return response;
-        }
+        String passwordPlain = passwordCryptoService.decrypt(user.getPasswordEncrypted());
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            int newFailedAttempts = user.getFailedAttempts() + 1;
-            user.setFailedAttempts(newFailedAttempts);
-
-            if (newFailedAttempts >= MAX_FAILED_ATTEMPTS) {
-                user.setLockUntil(LocalDateTime.now().plusMinutes(LOCK_DURATION_MINUTES));
-                user.setFailedAttempts(0);
-                userRepository.save(user);
-                response.put("error", "Compte bloqué temporairement. Réessayez plus tard.");
-                return response;
-            }
-
-            userRepository.save(user);
+        if (!passwordPlain.equals(request.getPassword())) {
             response.put("error", "Mot de passe incorrect");
             return response;
         }
 
-        user.setFailedAttempts(0);
-        user.setLockUntil(null);
-
         String token = UUID.randomUUID().toString();
+        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(TOKEN_DURATION_MINUTES);
+
         user.setToken(token);
+        user.setTokenExpiresAt(expiresAt);
         userRepository.save(user);
 
         response.put("message", "Connexion réussie");
         response.put("token", token);
+        response.put("expiresAt", expiresAt);
         response.put("email", user.getEmail());
 
         return response;
@@ -169,10 +159,16 @@ public class AuthService {
             return response;
         }
 
+        if (user.getTokenExpiresAt() == null || user.getTokenExpiresAt().isBefore(LocalDateTime.now())) {
+            response.put("error", "Token expiré ou invalide");
+            return response;
+        }
+
         response.put("id", user.getId());
         response.put("name", user.getName());
         response.put("email", user.getEmail());
         response.put("createdAt", user.getCreatedAt());
+        response.put("tokenExpiresAt", user.getTokenExpiresAt());
 
         return response;
     }
@@ -201,6 +197,7 @@ public class AuthService {
         }
 
         user.setToken(null);
+        user.setTokenExpiresAt(null);
         userRepository.save(user);
 
         response.put("message", "Déconnexion réussie");

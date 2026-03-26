@@ -1,5 +1,6 @@
 package com.example.auth.service;
 
+import com.example.auth.AuthApplication;
 import com.example.auth.dto.LoginRequest;
 import com.example.auth.dto.RegisterRequest;
 import com.example.auth.entity.User;
@@ -15,12 +16,17 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * Tests unitaires du service d'authentification.
+ * Tests du service d'authentification pour le TP3.
+ *
+ * Cette version est adaptée à l'étape 3.1 :
+ * - mot de passe stocké en version chiffrée réversible
+ * - token avec date d'expiration
+ * - plus de logique lockUntil / brute force de TP2
  *
  * @author Poun
- * @version 2.4
+ * @version 3.1
  */
-@SpringBootTest
+@SpringBootTest(classes = AuthApplication.class)
 @ActiveProfiles("test")
 public class AuthServiceTest {
 
@@ -37,86 +43,116 @@ public class AuthServiceTest {
     private UserRepository userRepository;
 
     /**
-     * Nettoie la base avant chaque test.
+     * Nettoyage avant chaque test.
      */
     @BeforeEach
-    void cleanDatabase() {
+    void setUp() {
         userRepository.deleteAll();
     }
 
     /**
-     * Vérifie qu'une inscription valide fonctionne.
+     * Teste une inscription valide.
      */
     @Test
     void testRegisterSuccess() {
         RegisterRequest request = new RegisterRequest();
         request.setName("Poun");
-        request.setEmail("register1@gmail.com");
-        request.setPassword("Bonjour123!A");
+        request.setEmail("poun@gmail.com");
+        request.setPassword("Azerty1234!@");
 
         Map<String, Object> response = authService.register(request);
 
         Assertions.assertEquals("Inscription réussie", response.get("message"));
+        Assertions.assertTrue(userRepository.findByEmail("poun@gmail.com").isPresent());
     }
 
     /**
-     * Vérifie qu'un email déjà utilisé est refusé.
+     * Teste une inscription avec email déjà utilisé.
      */
     @Test
     void testRegisterDuplicateEmail() {
-        RegisterRequest request1 = new RegisterRequest();
-        request1.setName("Poun");
-        request1.setEmail("duplicate1@gmail.com");
-        request1.setPassword("Bonjour123!A");
+        RegisterRequest first = new RegisterRequest();
+        first.setName("Poun");
+        first.setEmail("poun@gmail.com");
+        first.setPassword("Azerty1234!@");
+        authService.register(first);
 
-        RegisterRequest request2 = new RegisterRequest();
-        request2.setName("Poun2");
-        request2.setEmail("duplicate1@gmail.com");
-        request2.setPassword("Bonjour123!A");
+        RegisterRequest second = new RegisterRequest();
+        second.setName("Poun2");
+        second.setEmail("poun@gmail.com");
+        second.setPassword("Azerty1234!@");
 
-        authService.register(request1);
-        Map<String, Object> response = authService.register(request2);
+        Map<String, Object> response = authService.register(second);
 
         Assertions.assertEquals("Email déjà utilisé", response.get("error"));
     }
 
     /**
-     * Vérifie qu'une connexion valide fonctionne.
+     * Teste une inscription avec mot de passe invalide.
+     */
+    @Test
+    void testRegisterWeakPassword() {
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Poun");
+        request.setEmail("poun@gmail.com");
+        request.setPassword("123");
+
+        Map<String, Object> response = authService.register(request);
+
+        Assertions.assertNotNull(response.get("error"));
+    }
+
+    /**
+     * Teste une connexion valide.
      */
     @Test
     void testLoginSuccess() {
         RegisterRequest registerRequest = new RegisterRequest();
         registerRequest.setName("Poun");
-        registerRequest.setEmail("login1@gmail.com");
-        registerRequest.setPassword("Bonjour123!A");
-
+        registerRequest.setEmail("poun@gmail.com");
+        registerRequest.setPassword("Azerty1234!@!");
         authService.register(registerRequest);
 
         LoginRequest loginRequest = new LoginRequest();
-        loginRequest.setEmail("login1@gmail.com");
-        loginRequest.setPassword("Bonjour123!A");
+        loginRequest.setEmail("poun@gmail.com");
+        loginRequest.setPassword("Azerty1234!@!");
 
         Map<String, Object> response = authService.login(loginRequest);
 
         Assertions.assertEquals("Connexion réussie", response.get("message"));
         Assertions.assertNotNull(response.get("token"));
+        Assertions.assertEquals("poun@gmail.com", response.get("email"));
+        Assertions.assertNotNull(response.get("expiresAt"));
     }
 
     /**
-     * Vérifie qu'un mauvais mot de passe est refusé.
+     * Teste une connexion avec utilisateur introuvable.
+     */
+    @Test
+    void testLoginUserNotFound() {
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setEmail("inconnu@gmail.com");
+        loginRequest.setPassword("Azerty1234!@");
+
+        Map<String, Object> response = authService.login(loginRequest);
+
+        Assertions.assertEquals("Utilisateur introuvable", response.get("error"));
+    }
+
+    /**
+     * Teste une connexion avec mauvais mot de passe.
      */
     @Test
     void testLoginWrongPassword() {
         RegisterRequest registerRequest = new RegisterRequest();
         registerRequest.setName("Poun");
-        registerRequest.setEmail("login2@gmail.com");
-        registerRequest.setPassword("Bonjour123!A");
-
+        registerRequest.setEmail("poun@gmail.com");
+        registerRequest.setPassword("Azerty1234!@!");
         authService.register(registerRequest);
 
         LoginRequest loginRequest = new LoginRequest();
-        loginRequest.setEmail("login2@gmail.com");
-        loginRequest.setPassword("Mauvais123!A");
+        loginRequest.setEmail("poun@gmail.com");
+        loginRequest.setPassword("Mauvais12!");
 
         Map<String, Object> response = authService.login(loginRequest);
 
@@ -124,56 +160,115 @@ public class AuthServiceTest {
     }
 
     /**
-     * Vérifie qu'après 5 mauvais essais, le compte est bloqué.
+     * Teste la récupération du profil avec un token valide.
      */
     @Test
-    void testAccountLockedAfterFiveFailedAttempts() {
+    void testGetMeSuccess() {
         RegisterRequest registerRequest = new RegisterRequest();
         registerRequest.setName("Poun");
-        registerRequest.setEmail("lock1@gmail.com");
-        registerRequest.setPassword("Bonjour123!A");
-
+        registerRequest.setEmail("poun@gmail.com");
+        registerRequest.setPassword("Azerty1234!@");
         authService.register(registerRequest);
 
-        LoginRequest badLogin = new LoginRequest();
-        badLogin.setEmail("lock1@gmail.com");
-        badLogin.setPassword("FauxPassword123!");
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setEmail("poun@gmail.com");
+        loginRequest.setPassword("Azerty1234!@");
+        Map<String, Object> loginResponse = authService.login(loginRequest);
 
-        for (int i = 0; i < 5; i++) {
-            authService.login(badLogin);
-        }
+        String token = (String) loginResponse.get("token");
 
-        User user = userRepository.findByEmail("lock1@gmail.com").orElse(null);
+        Map<String, Object> meResponse = authService.getMe("Bearer " + token);
 
-        Assertions.assertNotNull(user);
-        Assertions.assertNotNull(user.getLockUntil());
-        Assertions.assertTrue(user.getLockUntil().isAfter(LocalDateTime.now()));
+        Assertions.assertEquals("Poun", meResponse.get("name"));
+        Assertions.assertEquals("poun@gmail.com", meResponse.get("email"));
+        Assertions.assertNotNull(meResponse.get("tokenExpiresAt"));
     }
 
     /**
-     * Vérifie qu'un compte bloqué ne peut pas se connecter même avec le bon mot de passe.
+     * Teste getMe sans header Authorization valide.
      */
     @Test
-    void testBlockedAccountCannotLogin() {
+    void testGetMeWithoutToken() {
+        Map<String, Object> response = authService.getMe(null);
+
+        Assertions.assertEquals("Token manquant ou invalide", response.get("error"));
+    }
+
+    /**
+     * Teste getMe avec token inconnu.
+     */
+    @Test
+    void testGetMeWithUnknownToken() {
+        Map<String, Object> response = authService.getMe("Bearer token-inconnu");
+
+        Assertions.assertEquals("Utilisateur non trouvé pour ce token", response.get("error"));
+    }
+
+    /**
+     * Teste getMe avec token expiré.
+     */
+    @Test
+    void testGetMeWithExpiredToken() {
         RegisterRequest registerRequest = new RegisterRequest();
         registerRequest.setName("Poun");
-        registerRequest.setEmail("lock2@gmail.com");
-        registerRequest.setPassword("Bonjour123!A");
-
+        registerRequest.setEmail("poun@gmail.com");
+        registerRequest.setPassword("Azerty1234!@");
         authService.register(registerRequest);
 
-        User user = userRepository.findByEmail("lock2@gmail.com").orElse(null);
-        Assertions.assertNotNull(user);
-
-        user.setLockUntil(LocalDateTime.now().plusMinutes(2));
+        User user = userRepository.findByEmail("poun@gmail.com").orElseThrow();
+        user.setToken("token-expire");
+        user.setTokenExpiresAt(LocalDateTime.now().minusMinutes(1));
         userRepository.save(user);
 
+        Map<String, Object> response = authService.getMe("Bearer token-expire");
+
+        Assertions.assertEquals("Token expiré ou invalide", response.get("error"));
+    }
+
+    /**
+     * Teste la déconnexion avec token valide.
+     */
+    @Test
+    void testLogoutSuccess() {
+        RegisterRequest registerRequest = new RegisterRequest();
+        registerRequest.setName("Poun");
+        registerRequest.setEmail("poun@gmail.com");
+        registerRequest.setPassword("Azerty1234!@");
+        authService.register(registerRequest);
+
         LoginRequest loginRequest = new LoginRequest();
-        loginRequest.setEmail("lock2@gmail.com");
-        loginRequest.setPassword("Bonjour123!A");
+        loginRequest.setEmail("poun@gmail.com");
+        loginRequest.setPassword("Azerty1234!@");
+        Map<String, Object> loginResponse = authService.login(loginRequest);
 
-        Map<String, Object> response = authService.login(loginRequest);
+        String token = (String) loginResponse.get("token");
 
-        Assertions.assertEquals("Compte bloqué temporairement. Réessayez plus tard.", response.get("error"));
+        Map<String, Object> logoutResponse = authService.logout("Bearer " + token);
+
+        Assertions.assertEquals("Déconnexion réussie", logoutResponse.get("message"));
+
+        User user = userRepository.findByEmail("poun@gmail.com").orElseThrow();
+        Assertions.assertNull(user.getToken());
+        Assertions.assertNull(user.getTokenExpiresAt());
+    }
+
+    /**
+     * Teste la déconnexion sans header Authorization valide.
+     */
+    @Test
+    void testLogoutWithoutToken() {
+        Map<String, Object> response = authService.logout(null);
+
+        Assertions.assertEquals("Token manquant ou invalide", response.get("error"));
+    }
+
+    /**
+     * Teste la déconnexion avec token inconnu.
+     */
+    @Test
+    void testLogoutWithUnknownToken() {
+        Map<String, Object> response = authService.logout("Bearer token-inconnu");
+
+        Assertions.assertEquals("Utilisateur non trouvé", response.get("error"));
     }
 }

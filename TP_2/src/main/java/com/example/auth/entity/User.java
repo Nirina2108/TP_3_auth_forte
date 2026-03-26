@@ -12,13 +12,17 @@ import java.time.LocalDateTime;
 /**
  * Entité représentant un utilisateur.
  *
- * TP2 étape 4 :
- * - mot de passe stocké en password_hash
- * - token simple
- * - protection anti brute force
+ * TP3 étape 1 :
+ * - mot de passe stocké de façon réversible pour le protocole pédagogique
+ * - préparation du futur protocole HMAC
+ * - token conservé temporairement pour ne pas casser /api/me
+ *
+ * Limite importante :
+ * ce stockage réversible est pédagogique.
+ * En industrie, on préfère un hash non réversible adaptatif.
  *
  * @author Poun
- * @version 2.4
+ * @version 3.1
  */
 @Entity
 @Table(name = "users")
@@ -44,34 +48,31 @@ public class User {
     private String email;
 
     /**
-     * Mot de passe hashé avec BCrypt.
+     * Mot de passe chiffré de manière réversible.
+     *
+     * Ce choix est imposé ici pour le TP3 afin que le serveur puisse
+     * retrouver le secret et recalculer le HMAC côté serveur.
      */
-    @Column(name = "password_hash", nullable = false)
-    private String passwordHash;
+    @Column(name = "password_encrypted", nullable = false, length = 500)
+    private String passwordEncrypted;
 
     /**
-     * Token simple d'authentification.
+     * Token simple conservé temporairement pendant la transition vers TP3.
      */
     @Column(length = 255)
     private String token;
+
+    /**
+     * Date d'expiration du token.
+     */
+    @Column(name = "token_expires_at")
+    private LocalDateTime tokenExpiresAt;
 
     /**
      * Date de création du compte.
      */
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-
-    /**
-     * Nombre d'échecs de connexion.
-     */
-    @Column(name = "failed_attempts")
-    private int failedAttempts;
-
-    /**
-     * Date/heure de fin de blocage.
-     */
-    @Column(name = "lock_until")
-    private LocalDateTime lockUntil;
 
     /**
      * Constructeur vide.
@@ -134,21 +135,21 @@ public class User {
     }
 
     /**
-     * Retourne le mot de passe hashé.
+     * Retourne le mot de passe chiffré.
      *
-     * @return mot de passe hashé
+     * @return mot de passe chiffré
      */
-    public String getPasswordHash() {
-        return passwordHash;
+    public String getPasswordEncrypted() {
+        return passwordEncrypted;
     }
 
     /**
-     * Modifie le mot de passe hashé.
+     * Modifie le mot de passe chiffré.
      *
-     * @param passwordHash nouveau hash
+     * @param passwordEncrypted nouvelle valeur chiffrée
      */
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
+    public void setPasswordEncrypted(String passwordEncrypted) {
+        this.passwordEncrypted = passwordEncrypted;
     }
 
     /**
@@ -170,6 +171,24 @@ public class User {
     }
 
     /**
+     * Retourne la date d'expiration du token.
+     *
+     * @return date d'expiration
+     */
+    public LocalDateTime getTokenExpiresAt() {
+        return tokenExpiresAt;
+    }
+
+    /**
+     * Modifie la date d'expiration du token.
+     *
+     * @param tokenExpiresAt nouvelle date d'expiration
+     */
+    public void setTokenExpiresAt(LocalDateTime tokenExpiresAt) {
+        this.tokenExpiresAt = tokenExpiresAt;
+    }
+
+    /**
      * Retourne la date de création.
      *
      * @return date de création
@@ -185,41 +204,5 @@ public class User {
      */
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
-    }
-
-    /**
-     * Retourne le nombre d'échecs.
-     *
-     * @return nombre d'échecs
-     */
-    public int getFailedAttempts() {
-        return failedAttempts;
-    }
-
-    /**
-     * Modifie le nombre d'échecs.
-     *
-     * @param failedAttempts nouveau nombre d'échecs
-     */
-    public void setFailedAttempts(int failedAttempts) {
-        this.failedAttempts = failedAttempts;
-    }
-
-    /**
-     * Retourne la date de fin de blocage.
-     *
-     * @return date de fin de blocage
-     */
-    public LocalDateTime getLockUntil() {
-        return lockUntil;
-    }
-
-    /**
-     * Modifie la date de fin de blocage.
-     *
-     * @param lockUntil nouvelle date de blocage
-     */
-    public void setLockUntil(LocalDateTime lockUntil) {
-        this.lockUntil = lockUntil;
     }
 }

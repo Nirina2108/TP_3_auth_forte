@@ -3,15 +3,24 @@ package com.example.auth.controller;
 import com.example.auth.dto.LoginRequest;
 import com.example.auth.dto.RegisterRequest;
 import com.example.auth.service.AuthService;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
 /**
  * Controller REST pour l'authentification.
  *
+ * TP3 :
+ * cette version prépare la transition vers une preuve HMAC signée,
+ * tout en gardant temporairement les endpoints existants.
+ *
  * @author Poun
- * @version 1.0
+ * @version 3.1
  */
 @RestController
 @RequestMapping("/api/auth")
@@ -45,6 +54,9 @@ public class AuthController {
     /**
      * Endpoint de connexion.
      *
+     * Étape transitoire :
+     * le vrai protocole HMAC sera branché ensuite sur ce même endpoint.
+     *
      * @param request données de connexion
      * @return message + token
      */
@@ -65,6 +77,7 @@ public class AuthController {
     ) {
         return authService.getMe(authorizationHeader);
     }
+
     /**
      * Endpoint de déconnexion.
      *
