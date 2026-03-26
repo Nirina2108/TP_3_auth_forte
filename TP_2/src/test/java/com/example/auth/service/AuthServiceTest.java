@@ -18,13 +18,13 @@ import java.util.Map;
 /**
  * Tests du service d'authentification pour le TP3.
  *
- * Cette version est adaptée à l'étape 3.1 :
- * - mot de passe stocké en version chiffrée réversible
- * - token avec date d'expiration
- * - plus de logique lockUntil / brute force de TP2
+ * Cette version est adaptée à l'étape 3.2 :
+ * - inscription avec mot de passe chiffré réversible
+ * - login au nouveau format HMAC
+ * - plus de mot de passe direct dans LoginRequest
  *
  * @author Poun
- * @version 3.1
+ * @version 3.2
  */
 @SpringBootTest(classes = AuthApplication.class)
 @ActiveProfiles("test")
@@ -103,7 +103,7 @@ public class AuthServiceTest {
     }
 
     /**
-     * Teste une connexion valide.
+     * Teste une connexion valide au format TP3.
      */
     @Test
     void testLoginSuccess() {
@@ -115,14 +115,17 @@ public class AuthServiceTest {
 
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.setEmail("poun@gmail.com");
-        loginRequest.setPassword("Azerty1234!@!");
+        loginRequest.setNonce("test-nonce-1");
+        loginRequest.setTimestamp(System.currentTimeMillis() / 1000);
+        loginRequest.setHmac("fake-hmac");
 
         Map<String, Object> response = authService.login(loginRequest);
 
-        Assertions.assertEquals("Connexion réussie", response.get("message"));
-        Assertions.assertNotNull(response.get("token"));
+        Assertions.assertEquals("Format TP3 reçu, vérification HMAC à brancher en v3.3", response.get("message"));
         Assertions.assertEquals("poun@gmail.com", response.get("email"));
-        Assertions.assertNotNull(response.get("expiresAt"));
+        Assertions.assertEquals("test-nonce-1", response.get("nonce"));
+        Assertions.assertNotNull(response.get("timestamp"));
+        Assertions.assertEquals("fake-hmac", response.get("hmac"));
     }
 
     /**
@@ -132,7 +135,9 @@ public class AuthServiceTest {
     void testLoginUserNotFound() {
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.setEmail("inconnu@gmail.com");
-        loginRequest.setPassword("Azerty1234!@");
+        loginRequest.setNonce("test-nonce-2");
+        loginRequest.setTimestamp(System.currentTimeMillis() / 1000);
+        loginRequest.setHmac("fake-hmac");
 
         Map<String, Object> response = authService.login(loginRequest);
 
@@ -140,10 +145,10 @@ public class AuthServiceTest {
     }
 
     /**
-     * Teste une connexion avec mauvais mot de passe.
+     * Teste une connexion sans nonce.
      */
     @Test
-    void testLoginWrongPassword() {
+    void testLoginWithoutNonce() {
         RegisterRequest registerRequest = new RegisterRequest();
         registerRequest.setName("Poun");
         registerRequest.setEmail("poun@gmail.com");
@@ -152,36 +157,66 @@ public class AuthServiceTest {
 
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.setEmail("poun@gmail.com");
-        loginRequest.setPassword("Mauvais12!");
+        loginRequest.setTimestamp(System.currentTimeMillis() / 1000);
+        loginRequest.setHmac("fake-hmac");
 
         Map<String, Object> response = authService.login(loginRequest);
 
-        Assertions.assertEquals("Mot de passe incorrect", response.get("error"));
+        Assertions.assertEquals("Nonce obligatoire", response.get("error"));
     }
 
     /**
-     * Teste la récupération du profil avec un token valide.
+     * Teste une connexion sans timestamp.
      */
     @Test
-    void testGetMeSuccess() {
+    void testLoginWithoutTimestamp() {
         RegisterRequest registerRequest = new RegisterRequest();
         registerRequest.setName("Poun");
         registerRequest.setEmail("poun@gmail.com");
-        registerRequest.setPassword("Azerty1234!@");
+        registerRequest.setPassword("Azerty1234!@!");
         authService.register(registerRequest);
 
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.setEmail("poun@gmail.com");
-        loginRequest.setPassword("Azerty1234!@");
-        Map<String, Object> loginResponse = authService.login(loginRequest);
+        loginRequest.setNonce("test-nonce-3");
+        loginRequest.setHmac("fake-hmac");
 
-        String token = (String) loginResponse.get("token");
+        Map<String, Object> response = authService.login(loginRequest);
 
-        Map<String, Object> meResponse = authService.getMe("Bearer " + token);
+        Assertions.assertEquals("Timestamp obligatoire", response.get("error"));
+    }
 
-        Assertions.assertEquals("Poun", meResponse.get("name"));
-        Assertions.assertEquals("poun@gmail.com", meResponse.get("email"));
-        Assertions.assertNotNull(meResponse.get("tokenExpiresAt"));
+    /**
+     * Teste une connexion sans HMAC.
+     */
+    @Test
+    void testLoginWithoutHmac() {
+        RegisterRequest registerRequest = new RegisterRequest();
+        registerRequest.setName("Poun");
+        registerRequest.setEmail("poun@gmail.com");
+        registerRequest.setPassword("Azerty1234!@!");
+        authService.register(registerRequest);
+
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setEmail("poun@gmail.com");
+        loginRequest.setNonce("test-nonce-4");
+        loginRequest.setTimestamp(System.currentTimeMillis() / 1000);
+
+        Map<String, Object> response = authService.login(loginRequest);
+
+        Assertions.assertEquals("HMAC obligatoire", response.get("error"));
+    }
+
+    /**
+     * Teste la récupération du profil avec token inconnu.
+     *
+     * En v3.2, le login n'émet pas encore de vrai token.
+     */
+    @Test
+    void testGetMeWithUnknownToken() {
+        Map<String, Object> response = authService.getMe("Bearer token-inconnu");
+
+        Assertions.assertEquals("Utilisateur non trouvé pour ce token", response.get("error"));
     }
 
     /**
@@ -192,16 +227,6 @@ public class AuthServiceTest {
         Map<String, Object> response = authService.getMe(null);
 
         Assertions.assertEquals("Token manquant ou invalide", response.get("error"));
-    }
-
-    /**
-     * Teste getMe avec token inconnu.
-     */
-    @Test
-    void testGetMeWithUnknownToken() {
-        Map<String, Object> response = authService.getMe("Bearer token-inconnu");
-
-        Assertions.assertEquals("Utilisateur non trouvé pour ce token", response.get("error"));
     }
 
     /**
@@ -226,7 +251,9 @@ public class AuthServiceTest {
     }
 
     /**
-     * Teste la déconnexion avec token valide.
+     * Teste la déconnexion avec token valide préparé manuellement.
+     *
+     * En v3.2, le login ne crée pas encore de token final.
      */
     @Test
     void testLogoutSuccess() {
@@ -236,20 +263,18 @@ public class AuthServiceTest {
         registerRequest.setPassword("Azerty1234!@");
         authService.register(registerRequest);
 
-        LoginRequest loginRequest = new LoginRequest();
-        loginRequest.setEmail("poun@gmail.com");
-        loginRequest.setPassword("Azerty1234!@");
-        Map<String, Object> loginResponse = authService.login(loginRequest);
+        User user = userRepository.findByEmail("poun@gmail.com").orElseThrow();
+        user.setToken("token-valide");
+        user.setTokenExpiresAt(LocalDateTime.now().plusMinutes(15));
+        userRepository.save(user);
 
-        String token = (String) loginResponse.get("token");
-
-        Map<String, Object> logoutResponse = authService.logout("Bearer " + token);
+        Map<String, Object> logoutResponse = authService.logout("Bearer token-valide");
 
         Assertions.assertEquals("Déconnexion réussie", logoutResponse.get("message"));
 
-        User user = userRepository.findByEmail("poun@gmail.com").orElseThrow();
-        Assertions.assertNull(user.getToken());
-        Assertions.assertNull(user.getTokenExpiresAt());
+        User updatedUser = userRepository.findByEmail("poun@gmail.com").orElseThrow();
+        Assertions.assertNull(updatedUser.getToken());
+        Assertions.assertNull(updatedUser.getTokenExpiresAt());
     }
 
     /**

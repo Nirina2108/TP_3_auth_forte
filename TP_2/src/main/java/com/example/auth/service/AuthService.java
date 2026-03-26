@@ -15,17 +15,13 @@ import java.util.UUID;
 /**
  * Service contenant la logique métier de l'authentification.
  *
- * TP3 étape 1 :
+ * TP3 étape 3.2 :
  * - stockage réversible du secret utilisateur
- * - préparation du protocole HMAC + nonce
- * - login temporairement conservé en mode simple pour la transition
- *
- * Limite importante :
- * le stockage réversible est pédagogique et ne doit pas être considéré
- * comme une bonne pratique de production.
+ * - préparation du format HMAC côté client
+ * - la vérification serveur complète arrivera en 3.3
  *
  * @author Poun
- * @version 3.1
+ * @version 3.2
  */
 @Service
 public class AuthService {
@@ -51,7 +47,7 @@ public class AuthService {
     private final PasswordPolicyValidator passwordPolicyValidator = new PasswordPolicyValidator();
 
     /**
-     * Constructeur du service.
+     * Constructeur.
      *
      * @param userRepository repository utilisateur
      * @param passwordCryptoService service de chiffrement
@@ -95,17 +91,41 @@ public class AuthService {
     }
 
     /**
-     * Connexion temporaire de transition.
+     * Connexion au nouveau format TP3.
      *
-     * Pour cette étape 3.1, on garde encore une connexion simple afin de
-     * vérifier que le projet reste fonctionnel après migration du stockage.
-     * Le vrai protocole HMAC arrivera dans les étapes suivantes.
+     * À l'étape 3.2, on reçoit déjà :
+     * - email
+     * - nonce
+     * - timestamp
+     * - hmac
      *
-     * @param request données de connexion
-     * @return message + token ou erreur
+     * La vérification complète HMAC côté serveur sera faite en 3.3.
+     *
+     * @param request requête de login TP3
+     * @return réponse temporaire de transition
      */
     public Map<String, Object> login(LoginRequest request) {
         Map<String, Object> response = new HashMap<>();
+
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            response.put("error", "Email obligatoire");
+            return response;
+        }
+
+        if (request.getNonce() == null || request.getNonce().isBlank()) {
+            response.put("error", "Nonce obligatoire");
+            return response;
+        }
+
+        if (request.getTimestamp() <= 0) {
+            response.put("error", "Timestamp obligatoire");
+            return response;
+        }
+
+        if (request.getHmac() == null || request.getHmac().isBlank()) {
+            response.put("error", "HMAC obligatoire");
+            return response;
+        }
 
         User user = userRepository.findByEmail(request.getEmail()).orElse(null);
 
@@ -114,24 +134,11 @@ public class AuthService {
             return response;
         }
 
-        String passwordPlain = passwordCryptoService.decrypt(user.getPasswordEncrypted());
-
-        if (!passwordPlain.equals(request.getPassword())) {
-            response.put("error", "Mot de passe incorrect");
-            return response;
-        }
-
-        String token = UUID.randomUUID().toString();
-        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(TOKEN_DURATION_MINUTES);
-
-        user.setToken(token);
-        user.setTokenExpiresAt(expiresAt);
-        userRepository.save(user);
-
-        response.put("message", "Connexion réussie");
-        response.put("token", token);
-        response.put("expiresAt", expiresAt);
-        response.put("email", user.getEmail());
+        response.put("message", "Format TP3 reçu, vérification HMAC à brancher en v3.3");
+        response.put("email", request.getEmail());
+        response.put("nonce", request.getNonce());
+        response.put("timestamp", request.getTimestamp());
+        response.put("hmac", request.getHmac());
 
         return response;
     }
@@ -201,6 +208,32 @@ public class AuthService {
         userRepository.save(user);
 
         response.put("message", "Déconnexion réussie");
+        return response;
+    }
+
+    /**
+     * Émet un token simple temporaire.
+     *
+     * Cette méthode sera utilisée à partir de la vraie validation HMAC.
+     *
+     * @param user utilisateur authentifié
+     * @return réponse contenant token et expiration
+     */
+    public Map<String, Object> issueToken(User user) {
+        Map<String, Object> response = new HashMap<>();
+
+        String token = UUID.randomUUID().toString();
+        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(TOKEN_DURATION_MINUTES);
+
+        user.setToken(token);
+        user.setTokenExpiresAt(expiresAt);
+        userRepository.save(user);
+
+        response.put("message", "Connexion réussie");
+        response.put("accessToken", token);
+        response.put("expiresAt", expiresAt);
+        response.put("email", user.getEmail());
+
         return response;
     }
 }

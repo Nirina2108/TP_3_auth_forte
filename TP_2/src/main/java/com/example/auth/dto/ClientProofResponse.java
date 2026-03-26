@@ -1,44 +1,42 @@
 package com.example.auth.dto;
 
 /**
- * DTO pour la connexion TP3.
- *
- * En TP3, le mot de passe n'est plus envoyé dans la requête de login.
- * Le client envoie une preuve signée composée de :
- * - email
- * - nonce
- * - timestamp
- * - hmac
+ * DTO retourné après calcul de la preuve HMAC côté client simulé.
  *
  * @author Poun
  * @version 3.2
  */
-public class LoginRequest {
+public class ClientProofResponse {
 
     /**
-     * Email de l'utilisateur.
+     * Email.
      */
     private String email;
 
     /**
-     * Nonce aléatoire unique pour limiter le rejeu.
+     * Nonce généré.
      */
     private String nonce;
 
     /**
-     * Timestamp epoch en secondes.
+     * Timestamp epoch secondes.
      */
     private long timestamp;
 
     /**
-     * Signature HMAC SHA-256.
+     * Message signé.
+     */
+    private String message;
+
+    /**
+     * HMAC calculé.
      */
     private String hmac;
 
     /**
      * Retourne l'email.
      *
-     * @return email utilisateur
+     * @return email
      */
     public String getEmail() {
         return email;
@@ -74,7 +72,7 @@ public class LoginRequest {
     /**
      * Retourne le timestamp.
      *
-     * @return timestamp epoch secondes
+     * @return timestamp
      */
     public long getTimestamp() {
         return timestamp;
@@ -90,9 +88,27 @@ public class LoginRequest {
     }
 
     /**
+     * Retourne le message signé.
+     *
+     * @return message
+     */
+    public String getMessage() {
+        return message;
+    }
+
+    /**
+     * Modifie le message signé.
+     *
+     * @param message nouveau message
+     */
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    /**
      * Retourne le HMAC.
      *
-     * @return signature hmac
+     * @return hmac
      */
     public String getHmac() {
         return hmac;
@@ -101,7 +117,7 @@ public class LoginRequest {
     /**
      * Modifie le HMAC.
      *
-     * @param hmac nouvelle signature
+     * @param hmac nouveau hmac
      */
     public void setHmac(String hmac) {
         this.hmac = hmac;
