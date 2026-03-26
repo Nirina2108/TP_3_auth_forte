@@ -541,13 +541,26 @@ public class AuthServiceTest {
          * @param email email utilisateur
          * @return objet LoginRequest
          */
+        /**
+         * Crée une requête de connexion TP3.
+         *
+         * @param email email utilisateur
+         * @return objet LoginRequest
+         */
         private LoginRequest buildLoginRequest(String email) {
             LoginRequest request = new LoginRequest();
 
             long timestamp = System.currentTimeMillis() / 1000;
             String nonce = "nonce-" + System.nanoTime();
+
+            // 🔥 mot de passe utilisé dans les tests
+            String password = "123";
+
+            // 🔥 message correct TP3
             String message = email + ":" + nonce + ":" + timestamp;
-            String hmac = hmacService.generateHmac(message);
+
+            // 🔥 CORRECTION ICI (plus de generateHmac)
+            String hmac = hmacService.hmacSha256(password, message);
 
             request.setEmail(email);
             request.setNonce(nonce);
@@ -556,7 +569,6 @@ public class AuthServiceTest {
 
             return request;
         }
-
         /**
          * Crée une requête de connexion avec HMAC invalide.
          *

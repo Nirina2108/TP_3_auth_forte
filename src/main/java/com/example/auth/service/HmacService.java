@@ -8,64 +8,52 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
- * Service utilitaire pour calculer des signatures HMAC SHA-256.
+ * Service utilitaire pour le HMAC SHA-256.
+ *
+ * Version TP3 correcte :
+ * - clé = mot de passe utilisateur
+ * - message = email:nonce:timestamp
  *
  * @author Poun
- * @version 3.3
+ * @version 3.6
  */
 @Service
 public class HmacService {
 
     /**
-     * Secret partagé utilisé pour les calculs HMAC.
-     */
-    private static final String SECRET = "secret";
-
-    /**
-     * Construit le message canonique à signer.
+     * Construit le message à signer.
      *
-     * Format :
-     * email:nonce:timestamp
-     *
-     * @param email email utilisateur
-     * @param nonce nonce aléatoire
-     * @param timestamp timestamp epoch en secondes
-     * @return message à signer
+     * @param email email
+     * @param nonce nonce
+     * @param timestamp timestamp
+     * @return message formaté
      */
     public String buildMessage(String email, String nonce, long timestamp) {
-        return email + ":" + nonce + ":" + timestamp;
+        return email.trim() + ":" + nonce.trim() + ":" + timestamp;
     }
 
     /**
-     * Calcule un HMAC SHA-256 puis encode le résultat en Base64.
+     * Génère le HMAC SHA-256 avec une clé dynamique (mot de passe).
      *
-     * @param secret secret partagé
-     * @param data message à signer
-     * @return signature HMAC
+     * @param key mot de passe utilisateur
+     * @param message message à signer
+     * @return HMAC Base64
      */
-    public String hmacSha256(String secret, String data) {
+    public String hmacSha256(String key, String message) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
-            SecretKeySpec keySpec = new SecretKeySpec(
-                    secret.getBytes(StandardCharsets.UTF_8),
-                    "HmacSHA256"
-            );
-            mac.init(keySpec);
-            byte[] rawHmac = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
-            return Base64.getEncoder().encodeToString(rawHmac);
-        } catch (Exception e) {
-            throw new RuntimeException("Erreur pendant le calcul du HMAC", e);
-        }
-    }
 
-    /**
-     * Méthode simple utilisée par les tests.
-     * Elle calcule le HMAC avec le secret par défaut.
-     *
-     * @param data message à signer
-     * @return signature HMAC
-     */
-    public String generateHmac(String data) {
-        return hmacSha256(SECRET, data);
+            SecretKeySpec secretKey =
+                    new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+
+            mac.init(secretKey);
+
+            byte[] rawHmac = mac.doFinal(message.getBytes(StandardCharsets.UTF_8));
+
+            return Base64.getEncoder().encodeToString(rawHmac);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur HMAC", e);
+        }
     }
 }
