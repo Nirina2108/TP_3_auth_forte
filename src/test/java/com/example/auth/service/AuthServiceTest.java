@@ -38,7 +38,7 @@ import java.util.Map;
  * - logout
  *
  * @author Poun
- * @version 3.4
+ * @version 3.5
  */
 @SpringBootTest(classes = AuthApplication.class)
 @ActiveProfiles("test")
@@ -459,47 +459,17 @@ public class AuthServiceTest {
      * Tests du contrôleur d'authentification TP3.
      *
      * @author Poun
-     * @version 3.0
+     * @version 3.1
      */
     @SpringBootTest(classes = AuthApplication.class)
     @AutoConfigureMockMvc
     @ActiveProfiles("test")
-    public static class AuthControllerTest {
+    static class AuthControllerTest {
 
         /**
          * URL de base des routes d'authentification.
          */
         private static final String AUTH_URL = "/api/auth";
-
-        /**
-         * Texte attendu pour une inscription réussie.
-         */
-        private static final String MSG_REGISTER_OK = "Inscription reussie";
-
-        /**
-         * Texte attendu pour une connexion réussie.
-         */
-        private static final String MSG_LOGIN_OK = "Connexion reussie";
-
-        /**
-         * Texte attendu si email déjà utilisé.
-         */
-        private static final String MSG_EMAIL_USED = "Email deja utilise";
-
-        /**
-         * Texte attendu si email obligatoire.
-         */
-        private static final String MSG_EMAIL_REQUIRED = "Email obligatoire";
-
-        /**
-         * Texte attendu si utilisateur introuvable.
-         */
-        private static final String MSG_USER_NOT_FOUND = "Utilisateur introuvable";
-
-        /**
-         * Texte attendu si token manquant.
-         */
-        private static final String MSG_TOKEN_MISSING = "Token manquant";
 
         /**
          * Outil pour convertir objet Java en JSON.
@@ -539,15 +509,16 @@ public class AuthServiceTest {
          * Crée une requête de connexion TP3.
          *
          * @param email email utilisateur
+         * @param password mot de passe utilisateur
          * @return objet LoginRequest
          */
-        private LoginRequest buildLoginRequest(String email) {
+        private LoginRequest buildLoginRequest(String email, String password) {
             LoginRequest request = new LoginRequest();
 
             long timestamp = System.currentTimeMillis() / 1000;
             String nonce = "nonce-" + System.nanoTime();
             String message = email + ":" + nonce + ":" + timestamp;
-            String hmac = hmacService.generateHmac(message);
+            String hmac = hmacService.hmacSha256(password, message);
 
             request.setEmail(email);
             request.setNonce(nonce);
@@ -581,34 +552,30 @@ public class AuthServiceTest {
          * Envoie une requête POST /register.
          *
          * @param request données d'inscription
-         * @return contenu texte de la réponse
+         * @return résultat MVC
          * @throws Exception si erreur
          */
-        private String postRegister(RegisterRequest request) throws Exception {
-            MvcResult result = mockMvc.perform(
+        private MvcResult postRegister(RegisterRequest request) throws Exception {
+            return mockMvc.perform(
                     org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(AUTH_URL + "/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
             ).andReturn();
-
-            return result.getResponse().getContentAsString();
         }
 
         /**
          * Envoie une requête POST /login.
          *
          * @param request données de connexion
-         * @return contenu texte de la réponse
+         * @return résultat MVC
          * @throws Exception si erreur
          */
-        private String postLogin(LoginRequest request) throws Exception {
-            MvcResult result = mockMvc.perform(
+        private MvcResult postLogin(LoginRequest request) throws Exception {
+            return mockMvc.perform(
                     org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(AUTH_URL + "/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
             ).andReturn();
-
-            return result.getResponse().getContentAsString();
         }
 
         /**
@@ -618,10 +585,11 @@ public class AuthServiceTest {
          */
         @Test
         void testRegisterSuccess() throws Exception {
-            RegisterRequest request = buildRegisterRequest("Jean", "jean@gmail.com", "123");
-            String response = postRegister(request);
+            RegisterRequest request = buildRegisterRequest("Jean", "jean@gmail.com", "Azerty1234!@");
 
-            Assertions.assertTrue(response.contains(MSG_REGISTER_OK));
+            MvcResult result = postRegister(request);
+
+            Assertions.assertEquals(200, result.getResponse().getStatus());
         }
 
         /**
@@ -631,12 +599,12 @@ public class AuthServiceTest {
          */
         @Test
         void testRegisterDuplicate() throws Exception {
-            RegisterRequest request = buildRegisterRequest("Sara", "sara@gmail.com", "123");
+            RegisterRequest request = buildRegisterRequest("Sara", "sara@gmail.com", "Azerty1234!@");
 
             postRegister(request);
-            String response = postRegister(request);
+            MvcResult result = postRegister(request);
 
-            Assertions.assertTrue(response.contains(MSG_EMAIL_USED));
+            Assertions.assertEquals(400, result.getResponse().getStatus());
         }
 
         /**
@@ -646,10 +614,11 @@ public class AuthServiceTest {
          */
         @Test
         void testRegisterWithoutEmail() throws Exception {
-            RegisterRequest request = buildRegisterRequest("Test", "", "123");
-            String response = postRegister(request);
+            RegisterRequest request = buildRegisterRequest("Test", "", "Azerty1234!@");
 
-            Assertions.assertTrue(response.contains(MSG_EMAIL_REQUIRED));
+            MvcResult result = postRegister(request);
+
+            Assertions.assertEquals(400, result.getResponse().getStatus());
         }
 
         /**
@@ -659,13 +628,14 @@ public class AuthServiceTest {
          */
         @Test
         void testLoginSuccess() throws Exception {
-            RegisterRequest registerRequest = buildRegisterRequest("Marie", "marie@gmail.com", "123");
+            RegisterRequest registerRequest = buildRegisterRequest("Marie", "marie@gmail.com", "Azerty1234!@");
             postRegister(registerRequest);
 
-            LoginRequest loginRequest = buildLoginRequest("marie@gmail.com");
-            String response = postLogin(loginRequest);
+            LoginRequest loginRequest = buildLoginRequest("marie@gmail.com", "Azerty1234!@");
+            MvcResult result = postLogin(loginRequest);
 
-            Assertions.assertTrue(response.contains(MSG_LOGIN_OK));
+            Assertions.assertEquals(200, result.getResponse().getStatus());
+            Assertions.assertTrue(result.getResponse().getContentAsString().contains("accessToken"));
         }
 
         /**
@@ -675,26 +645,10 @@ public class AuthServiceTest {
          */
         @Test
         void testLoginUserNotFound() throws Exception {
-            LoginRequest loginRequest = buildLoginRequest("no@gmail.com");
-            String response = postLogin(loginRequest);
+            LoginRequest loginRequest = buildLoginRequest("no@gmail.com", "Azerty1234!@");
+            MvcResult result = postLogin(loginRequest);
 
-            Assertions.assertTrue(response.contains(MSG_USER_NOT_FOUND));
-        }
-
-        /**
-         * Vérifie qu'un accès protégé sans token est refusé.
-         *
-         * @throws Exception si erreur
-         */
-        @Test
-        void testProtectedWithoutToken() throws Exception {
-            MvcResult result = mockMvc.perform(
-                    org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(AUTH_URL + "/protected")
-            ).andReturn();
-
-            String response = result.getResponse().getContentAsString();
-
-            Assertions.assertTrue(response.contains(MSG_TOKEN_MISSING));
+            Assertions.assertEquals(400, result.getResponse().getStatus());
         }
 
         /**
@@ -704,13 +658,41 @@ public class AuthServiceTest {
          */
         @Test
         void testLoginInvalidHmac() throws Exception {
-            RegisterRequest registerRequest = buildRegisterRequest("Paul", "paul@gmail.com", "123");
+            RegisterRequest registerRequest = buildRegisterRequest("Paul", "paul@gmail.com", "Azerty1234!@");
             postRegister(registerRequest);
 
             LoginRequest loginRequest = buildInvalidLoginRequest("paul@gmail.com");
-            String response = postLogin(loginRequest);
+            MvcResult result = postLogin(loginRequest);
 
-            Assertions.assertFalse(response.contains(MSG_LOGIN_OK));
+            Assertions.assertEquals(400, result.getResponse().getStatus());
+        }
+
+        /**
+         * Vérifie qu'un accès à /me sans token est refusé.
+         *
+         * @throws Exception si erreur
+         */
+        @Test
+        void testMeWithoutToken() throws Exception {
+            MvcResult result = mockMvc.perform(
+                    org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(AUTH_URL + "/me")
+            ).andReturn();
+
+            Assertions.assertEquals(401, result.getResponse().getStatus());
+        }
+
+        /**
+         * Vérifie qu'un logout sans token est refusé.
+         *
+         * @throws Exception si erreur
+         */
+        @Test
+        void testLogoutWithoutToken() throws Exception {
+            MvcResult result = mockMvc.perform(
+                    org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(AUTH_URL + "/logout")
+            ).andReturn();
+
+            Assertions.assertEquals(401, result.getResponse().getStatus());
         }
     }
 }

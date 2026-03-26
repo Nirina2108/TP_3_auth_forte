@@ -14,7 +14,7 @@
 
 	<groupId>com.example</groupId>
 	<artifactId>TP_3_auth_forte</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>3.0.1-SNAPSHOT</version>
 	<name>TP_3_auth_forte</name>
 	<description>TP 3 Authentification forte</description>
 
@@ -24,6 +24,14 @@
 		<sonar.projectKey>nirina2108_TP_3_auth_forte</sonar.projectKey>
 		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 		<sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+		<sonar.coverage.exclusions>
+			**/client/**,
+			**/ui/**,
+			**/*Application.java,
+			**/*UiApplication.java,
+			**/*UiController.java,
+			**/exception/**
+		</sonar.coverage.exclusions>
 	</properties>
 
 	<dependencies>
