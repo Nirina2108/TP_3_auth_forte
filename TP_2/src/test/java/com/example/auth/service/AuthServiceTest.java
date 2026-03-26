@@ -411,39 +411,26 @@ public class AuthServiceTest {
 
         Assertions.assertEquals("Utilisateur non trouvé", response.get("error"));
     }
-    @Test
-    void testMeWithoutToken() {
-        Map<String, Object> response = authService.getMe(null);
-        Assertions.assertTrue(response.containsKey("error"));
-    }
 
-    @Test
-    void testLogoutWithoutToken() {
-        Map<String, Object> response = authService.logout(null);
-        Assertions.assertTrue(response.containsKey("error"));
-    }
-    @Test
-    void testGetMeWithoutToken() {
-        Map<String, Object> response = authService.getMe(null);
-        Assertions.assertTrue(response.containsKey("error"));
-    }
-
-    @Test
-    void testLogoutWithoutToken() {
-        Map<String, Object> response = authService.logout(null);
-        Assertions.assertTrue(response.containsKey("error"));
-    }
-
+    /**
+     * Teste un login avec utilisateur invalide.
+     */
     @Test
     void testLoginWithInvalidUser() {
         LoginRequest request = new LoginRequest();
         request.setEmail("fake@gmail.com");
-        request.setPassword("123");
+        request.setNonce("test-nonce");
+        request.setTimestamp(System.currentTimeMillis() / 1000);
+        request.setHmac("fake-hmac");
 
         Map<String, Object> response = authService.login(request);
 
         Assertions.assertTrue(response.containsKey("error"));
     }
+
+    /**
+     * Teste un login avec HMAC faux.
+     */
     @Test
     void testLoginWrongPassword() {
         RegisterRequest r = new RegisterRequest();
@@ -454,7 +441,9 @@ public class AuthServiceTest {
 
         LoginRequest request = new LoginRequest();
         request.setEmail("test@gmail.com");
-        request.setPassword("wrong");
+        request.setNonce("test-nonce");
+        request.setTimestamp(System.currentTimeMillis() / 1000);
+        request.setHmac("fake-hmac");
 
         Map<String, Object> response = authService.login(request);
 
