@@ -8,12 +8,17 @@ import com.example.auth.dto.RegisterRequest;
 import com.example.auth.entity.User;
 import com.example.auth.repository.AuthNonceRepository;
 import com.example.auth.repository.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -448,5 +453,264 @@ public class AuthServiceTest {
         Map<String, Object> response = authService.login(request);
 
         Assertions.assertTrue(response.containsKey("error"));
+    }
+
+    /**
+     * Tests du contrôleur d'authentification TP3.
+     *
+     * @author Poun
+     * @version 3.0
+     */
+    @SpringBootTest(classes = AuthApplication.class)
+    @AutoConfigureMockMvc
+    @ActiveProfiles("test")
+    public static class AuthControllerTest {
+
+        /**
+         * URL de base des routes d'authentification.
+         */
+        private static final String AUTH_URL = "/api/auth";
+
+        /**
+         * Texte attendu pour une inscription réussie.
+         */
+        private static final String MSG_REGISTER_OK = "Inscription reussie";
+
+        /**
+         * Texte attendu pour une connexion réussie.
+         */
+        private static final String MSG_LOGIN_OK = "Connexion reussie";
+
+        /**
+         * Texte attendu si email déjà utilisé.
+         */
+        private static final String MSG_EMAIL_USED = "Email deja utilise";
+
+        /**
+         * Texte attendu si email obligatoire.
+         */
+        private static final String MSG_EMAIL_REQUIRED = "Email obligatoire";
+
+        /**
+         * Texte attendu si utilisateur introuvable.
+         */
+        private static final String MSG_USER_NOT_FOUND = "Utilisateur introuvable";
+
+        /**
+         * Texte attendu si token manquant.
+         */
+        private static final String MSG_TOKEN_MISSING = "Token manquant";
+
+        /**
+         * Outil pour convertir objet Java en JSON.
+         */
+        @Autowired
+        private ObjectMapper objectMapper;
+
+        /**
+         * Outil pour simuler les appels HTTP.
+         */
+        @Autowired
+        private MockMvc mockMvc;
+
+        /**
+         * Service HMAC utilisé pour générer la signature dans les tests.
+         */
+        @Autowired
+        private HmacService hmacService;
+
+        /**
+         * Crée une requête d'inscription.
+         *
+         * @param name nom
+         * @param email email
+         * @param password mot de passe
+         * @return objet RegisterRequest
+         */
+        private RegisterRequest buildRegisterRequest(String name, String email, String password) {
+            RegisterRequest request = new RegisterRequest();
+            request.setName(name);
+            request.setEmail(email);
+            request.setPassword(password);
+            return request;
+        }
+
+        /**
+         * Crée une requête de connexion TP3.
+         *
+         * @param email email utilisateur
+         * @return objet LoginRequest
+         */
+        private LoginRequest buildLoginRequest(String email) {
+            LoginRequest request = new LoginRequest();
+
+            long timestamp = System.currentTimeMillis() / 1000;
+            String nonce = "nonce-" + System.nanoTime();
+            String message = email + ":" + nonce + ":" + timestamp;
+            String hmac = hmacService.generateHmac(message);
+
+            request.setEmail(email);
+            request.setNonce(nonce);
+            request.setTimestamp(timestamp);
+            request.setHmac(hmac);
+
+            return request;
+        }
+
+        /**
+         * Crée une requête de connexion avec HMAC invalide.
+         *
+         * @param email email utilisateur
+         * @return objet LoginRequest invalide
+         */
+        private LoginRequest buildInvalidLoginRequest(String email) {
+            LoginRequest request = new LoginRequest();
+
+            long timestamp = System.currentTimeMillis() / 1000;
+            String nonce = "nonce-" + System.nanoTime();
+
+            request.setEmail(email);
+            request.setNonce(nonce);
+            request.setTimestamp(timestamp);
+            request.setHmac("hmac-invalide");
+
+            return request;
+        }
+
+        /**
+         * Envoie une requête POST /register.
+         *
+         * @param request données d'inscription
+         * @return contenu texte de la réponse
+         * @throws Exception si erreur
+         */
+        private String postRegister(RegisterRequest request) throws Exception {
+            MvcResult result = mockMvc.perform(
+                    org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(AUTH_URL + "/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
+            ).andReturn();
+
+            return result.getResponse().getContentAsString();
+        }
+
+        /**
+         * Envoie une requête POST /login.
+         *
+         * @param request données de connexion
+         * @return contenu texte de la réponse
+         * @throws Exception si erreur
+         */
+        private String postLogin(LoginRequest request) throws Exception {
+            MvcResult result = mockMvc.perform(
+                    org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(AUTH_URL + "/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
+            ).andReturn();
+
+            return result.getResponse().getContentAsString();
+        }
+
+        /**
+         * Vérifie qu'une inscription valide fonctionne.
+         *
+         * @throws Exception si erreur
+         */
+        @Test
+        void testRegisterSuccess() throws Exception {
+            RegisterRequest request = buildRegisterRequest("Jean", "jean@gmail.com", "123");
+            String response = postRegister(request);
+
+            Assertions.assertTrue(response.contains(MSG_REGISTER_OK));
+        }
+
+        /**
+         * Vérifie qu'un email déjà utilisé est refusé.
+         *
+         * @throws Exception si erreur
+         */
+        @Test
+        void testRegisterDuplicate() throws Exception {
+            RegisterRequest request = buildRegisterRequest("Sara", "sara@gmail.com", "123");
+
+            postRegister(request);
+            String response = postRegister(request);
+
+            Assertions.assertTrue(response.contains(MSG_EMAIL_USED));
+        }
+
+        /**
+         * Vérifie qu'un email vide est refusé.
+         *
+         * @throws Exception si erreur
+         */
+        @Test
+        void testRegisterWithoutEmail() throws Exception {
+            RegisterRequest request = buildRegisterRequest("Test", "", "123");
+            String response = postRegister(request);
+
+            Assertions.assertTrue(response.contains(MSG_EMAIL_REQUIRED));
+        }
+
+        /**
+         * Vérifie qu'une connexion valide fonctionne.
+         *
+         * @throws Exception si erreur
+         */
+        @Test
+        void testLoginSuccess() throws Exception {
+            RegisterRequest registerRequest = buildRegisterRequest("Marie", "marie@gmail.com", "123");
+            postRegister(registerRequest);
+
+            LoginRequest loginRequest = buildLoginRequest("marie@gmail.com");
+            String response = postLogin(loginRequest);
+
+            Assertions.assertTrue(response.contains(MSG_LOGIN_OK));
+        }
+
+        /**
+         * Vérifie qu'un utilisateur absent est refusé.
+         *
+         * @throws Exception si erreur
+         */
+        @Test
+        void testLoginUserNotFound() throws Exception {
+            LoginRequest loginRequest = buildLoginRequest("no@gmail.com");
+            String response = postLogin(loginRequest);
+
+            Assertions.assertTrue(response.contains(MSG_USER_NOT_FOUND));
+        }
+
+        /**
+         * Vérifie qu'un accès protégé sans token est refusé.
+         *
+         * @throws Exception si erreur
+         */
+        @Test
+        void testProtectedWithoutToken() throws Exception {
+            MvcResult result = mockMvc.perform(
+                    org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(AUTH_URL + "/protected")
+            ).andReturn();
+
+            String response = result.getResponse().getContentAsString();
+
+            Assertions.assertTrue(response.contains(MSG_TOKEN_MISSING));
+        }
+
+        /**
+         * Vérifie qu'un HMAC invalide est refusé.
+         *
+         * @throws Exception si erreur
+         */
+        @Test
+        void testLoginInvalidHmac() throws Exception {
+            RegisterRequest registerRequest = buildRegisterRequest("Paul", "paul@gmail.com", "123");
+            postRegister(registerRequest);
+
+            LoginRequest loginRequest = buildInvalidLoginRequest("paul@gmail.com");
+            String response = postLogin(loginRequest);
+
+            Assertions.assertFalse(response.contains(MSG_LOGIN_OK));
+        }
     }
 }
