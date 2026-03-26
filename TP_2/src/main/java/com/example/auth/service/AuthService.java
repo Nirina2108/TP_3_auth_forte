@@ -2,7 +2,9 @@ package com.example.auth.service;
 
 import com.example.auth.dto.LoginRequest;
 import com.example.auth.dto.RegisterRequest;
+import com.example.auth.entity.AuthNonce;
 import com.example.auth.entity.User;
+import com.example.auth.repository.AuthNonceRepository;
 import com.example.auth.repository.UserRepository;
 import com.example.auth.validator.PasswordPolicyValidator;
 import org.springframework.stereotype.Service;
@@ -15,19 +17,19 @@ import java.util.UUID;
 /**
  * Service contenant la logique métier de l'authentification.
  *
- * TP3 étape 3.2 :
- * - stockage réversible du secret utilisateur
- * - préparation du format HMAC côté client
- * - la vérification serveur complète arrivera en 3.3
+ * TP3 étape 3.3 :
+ * - vérification HMAC côté serveur
+ * - protection anti-replay avec nonce et timestamp
+ * - émission de token temporaire
  *
  * @author Poun
- * @version 3.2
+ * @version 3.3
  */
 @Service
 public class AuthService {
 
     /**
-     * Durée d'un token en minutes.
+     * Durée de vie du token en minutes.
      */
     private static final int TOKEN_DURATION_MINUTES = 15;
 
@@ -42,19 +44,36 @@ public class AuthService {
     private final PasswordCryptoService passwordCryptoService;
 
     /**
+     * Repository des nonces.
+     */
+    private final AuthNonceRepository authNonceRepository;
+
+    /**
+     * Service HMAC.
+     */
+    private final HmacService hmacService;
+
+    /**
      * Validateur de mot de passe.
      */
     private final PasswordPolicyValidator passwordPolicyValidator = new PasswordPolicyValidator();
 
     /**
-     * Constructeur.
+     * Constructeur du service.
      *
      * @param userRepository repository utilisateur
      * @param passwordCryptoService service de chiffrement
+     * @param authNonceRepository repository des nonces
+     * @param hmacService service HMAC
      */
-    public AuthService(UserRepository userRepository, PasswordCryptoService passwordCryptoService) {
+    public AuthService(UserRepository userRepository,
+                       PasswordCryptoService passwordCryptoService,
+                       AuthNonceRepository authNonceRepository,
+                       HmacService hmacService) {
         this.userRepository = userRepository;
         this.passwordCryptoService = passwordCryptoService;
+        this.authNonceRepository = authNonceRepository;
+        this.hmacService = hmacService;
     }
 
     /**
@@ -91,18 +110,10 @@ public class AuthService {
     }
 
     /**
-     * Connexion au nouveau format TP3.
+     * Connexion sécurisée TP3 avec HMAC.
      *
-     * À l'étape 3.2, on reçoit déjà :
-     * - email
-     * - nonce
-     * - timestamp
-     * - hmac
-     *
-     * La vérification complète HMAC côté serveur sera faite en 3.3.
-     *
-     * @param request requête de login TP3
-     * @return réponse temporaire de transition
+     * @param request requête de login
+     * @return réponse avec token ou erreur
      */
     public Map<String, Object> login(LoginRequest request) {
         Map<String, Object> response = new HashMap<>();
@@ -134,13 +145,43 @@ public class AuthService {
             return response;
         }
 
-        response.put("message", "Format TP3 reçu, vérification HMAC à brancher en v3.3");
-        response.put("email", request.getEmail());
-        response.put("nonce", request.getNonce());
-        response.put("timestamp", request.getTimestamp());
-        response.put("hmac", request.getHmac());
+        long now = System.currentTimeMillis() / 1000;
+        long diff = Math.abs(now - request.getTimestamp());
 
-        return response;
+        if (diff > 300) {
+            response.put("error", "Requête expirée");
+            return response;
+        }
+
+        if (authNonceRepository.findByUserAndNonce(user, request.getNonce()).isPresent()) {
+            response.put("error", "Nonce déjà utilisé");
+            return response;
+        }
+
+        String decryptedPassword = passwordCryptoService.decrypt(user.getPasswordEncrypted());
+
+        String message = hmacService.buildMessage(
+                request.getEmail(),
+                request.getNonce(),
+                request.getTimestamp()
+        );
+
+        String expectedHmac = hmacService.hmacSha256(decryptedPassword, message);
+
+        if (!constantTimeEquals(expectedHmac, request.getHmac())) {
+            response.put("error", "HMAC invalide");
+            return response;
+        }
+
+        AuthNonce authNonce = new AuthNonce();
+        authNonce.setUser(user);
+        authNonce.setNonce(request.getNonce());
+        authNonce.setCreatedAt(LocalDateTime.now());
+        authNonce.setExpiresAt(LocalDateTime.now().plusMinutes(5));
+        authNonce.setConsumed(true);
+        authNonceRepository.save(authNonce);
+
+        return issueToken(user);
     }
 
     /**
@@ -212,12 +253,10 @@ public class AuthService {
     }
 
     /**
-     * Émet un token simple temporaire.
-     *
-     * Cette méthode sera utilisée à partir de la vraie validation HMAC.
+     * Génère un token pour un utilisateur authentifié.
      *
      * @param user utilisateur authentifié
-     * @return réponse contenant token et expiration
+     * @return réponse avec token
      */
     public Map<String, Object> issueToken(User user) {
         Map<String, Object> response = new HashMap<>();
@@ -235,5 +274,25 @@ public class AuthService {
         response.put("email", user.getEmail());
 
         return response;
+    }
+
+    /**
+     * Compare deux chaînes en temps constant.
+     *
+     * @param a première chaîne
+     * @param b deuxième chaîne
+     * @return true si identiques, sinon false
+     */
+    private boolean constantTimeEquals(String a, String b) {
+        if (a == null || b == null || a.length() != b.length()) {
+            return false;
+        }
+
+        int result = 0;
+        for (int i = 0; i < a.length(); i++) {
+            result |= a.charAt(i) ^ b.charAt(i);
+        }
+
+        return result == 0;
     }
 }
